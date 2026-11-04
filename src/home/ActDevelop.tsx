@@ -10,7 +10,7 @@ interface Props {
   actions: ReactNode;
 }
 
-/** Act I: the print develops in the tray as you scroll; the pointer stirs the liquid. */
+/** Act I: the cyanotype develops in the rinsing tray as you scroll; the pointer stirs the water. */
 export function ActDevelop({ world, actions }: Props) {
   const section = useRef<HTMLElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -25,7 +25,10 @@ export function ActDevelop({ world, actions }: Props) {
   const radius = useTransform(lift, [0, 1], [0, 28]);
   const titleY = useTransform(p, [0, 0.6], ['0%', '-28%']);
   const hint = useTransform(p, [0, 0.06], [1, 0]);
-  const css = useTransform(dev, (d) => `brightness(${0.08 + d * 0.95}) contrast(${0.7 + d * 0.35}) sepia(${Math.max(0, 0.7 - d * 0.9)})`);
+  const css = useTransform(dev, (d) => {
+    const u = Math.max(0, 0.8 - d);
+    return `brightness(${0.08 + d * 0.95}) contrast(${0.7 + d * 0.35}) sepia(${u}) hue-rotate(${u * 25}deg)`;
+  });
 
   useEffect(() => {
     if (!world || !canvas.current) return;
@@ -106,7 +109,7 @@ export function ActDevelop({ world, actions }: Props) {
         </motion.div>
 
         <motion.div className="scroll-hint mono" style={{ opacity: hint }} aria-hidden>
-          <Icon name="down" size={16} /> Scroll to develop
+          <Icon name="down" size={16} /> Scroll to rinse the print
         </motion.div>
       </div>
     </section>

@@ -4,3 +4,6 @@ test-results
 playwright-report
 *.local
 .DS_Store
+
+# generated share source (kept out of git)
+scripts/.share-source.*

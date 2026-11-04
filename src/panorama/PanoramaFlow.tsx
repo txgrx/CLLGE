@@ -6,6 +6,7 @@ import { fitMedia } from '../model/geometry';
 import type { Crop, ImageAsset, Project } from '../model/types';
 import { drawPage } from '../render/drawWindow';
 import { coast } from '../templates/art';
+import { sampleBlob } from '../templates/samples';
 import { PhoneCarousel, Seg, Stepper, Switch } from '../ui/controls';
 import { fontsReady } from '../ui/fonts';
 import { Icon } from '../ui/Icon';
@@ -50,7 +51,9 @@ export function PanoramaFlow({ onBack, onOpen }: Props) {
   };
 
   const sample = async () => {
-    const blob = await coast(3600, 1500, 11);
+    // The cyanotype coast (sunset → lighthouse) when available, otherwise a drawn one.
+    const photo = await sampleBlob(['world-1', 'world-2'], 3600, 0.16, 0.02);
+    const blob = photo ? photo.blob : await coast(3600, 1500, 11);
     await load(Object.assign(blob, { name: 'sample-panorama.jpg' }));
   };
 
@@ -163,7 +166,7 @@ function Compose({ src, onReset, onOpen }: { src: Source; onReset(): void; onOpe
     [src.asset, slides, F.w, F.h, crop, cover, coverTitle, closing, closingText],
   );
   const slices = sliceInfo(src.asset, slides, F.w, F.h, crop);
-  const soft = slices[0].upscale > 1.25;
+  const soft = slices[0].upscale > 1.4;
 
   useEffect(() => {
     setSlide((s) => Math.min(s, project.pages.length - 1));
