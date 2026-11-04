@@ -12,6 +12,8 @@ import { FAMILY_LABEL, TEMPLATES, type TemplateFamily, type TemplateSpec } from 
 import { renderPages, templateThumbs } from '../templates/thumbs';
 import { Seg, Stepper, PhoneCarousel } from '../ui/controls';
 import { Icon } from '../ui/Icon';
+import { FilmSection } from './FilmSection';
+import { ScrollStory } from './ScrollStory';
 import { listItem, listParent, soft, spring } from '../ui/motion';
 
 interface Props {
@@ -103,6 +105,9 @@ export function Home({ onOpen, onPanorama }: Props) {
         <SwipeDemo />
       </header>
 
+      <ScrollStory />
+      <FilmSection />
+
       {error && (
         <p className="notice notice--warn" role="alert">
           {error}{' '}
@@ -114,10 +119,10 @@ export function Home({ onOpen, onPanorama }: Props) {
 
       <section className="section" aria-labelledby="ideas-h">
         <div className="section__head">
-          <h2 className="section__title" id="ideas-h">
+          <motion.h2 className="section__title" id="ideas-h" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={spring}>
             <small className="mono">Start from an idea</small>
             Templates
-          </h2>
+          </motion.h2>
           <Seg<'all' | TemplateFamily>
             label="Template family"
             value={family}
@@ -131,8 +136,9 @@ export function Home({ onOpen, onPanorama }: Props) {
               <motion.li
                 key={t.id}
                 layout
-                initial={{ opacity: 0, y: 18, filter: 'blur(4px)' }}
-                animate={{ opacity: 1, y: 0, filter: 'blur(0px)', transition: { ...spring, delay: i * 0.04 } }}
+                initial={{ opacity: 0, y: 28, filter: 'blur(6px)' }}
+                whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)', transition: { ...spring, delay: (i % 4) * 0.06 } }}
+                viewport={{ once: true, amount: 0.2 }}
                 exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.15 } }}
               >
                 <TemplateCard spec={t} opening={opening === t.id} onPick={() => void openTemplate(t)} />
@@ -144,10 +150,10 @@ export function Home({ onOpen, onPanorama }: Props) {
 
       <section className="section" aria-labelledby="mine-h">
         <div className="section__head">
-          <h2 className="section__title" id="mine-h">
+          <motion.h2 className="section__title" id="mine-h" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={spring}>
             <small className="mono">Saved in this browser</small>
             Your projects
-          </h2>
+          </motion.h2>
         </div>
         {projects === null ? (
           <p className="hint">Loading…</p>

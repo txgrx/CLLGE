@@ -263,4 +263,6 @@ async function runTemplates(scale = 0.25) {
   return out;
 }
 
-Object.assign(window, { runVejer, runSeams, runTemplates, harnessReady: true });
+import { filmAssets } from './filmAssets';
+
+Object.assign(window, { runVejer, runSeams, runTemplates, filmAssets, harnessReady: true });
