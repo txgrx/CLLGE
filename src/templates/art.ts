@@ -473,3 +473,121 @@ function roundRect(ctx: Ctx, x: number, y: number, w: number, h: number, r: numb
   ctx.arcTo(x, y, x + w, y, r);
   ctx.closePath();
 }
+
+/**
+ * One continuous world for the home page: sunset on the left, a city at dusk in the
+ * middle, a starry night on the right, all on a single unbroken horizon.
+ */
+export async function journey(w: number, h: number, seed: number): Promise<Blob> {
+  const r = rng(seed);
+  const { c, ctx } = canvas(w, h);
+  const horizon = h * 0.6;
+  // Sky palettes keyed along x: [x, top, middle, horizon].
+  const keys: [number, number[], number[], number[]][] = [
+    [0, [43, 29, 46], [201, 98, 74], [242, 178, 107]],
+    [0.32, [38, 28, 52], [176, 84, 82], [236, 150, 98]],
+    [0.58, [27, 33, 64], [106, 59, 90], [196, 111, 91]],
+    [0.8, [10, 12, 26], [30, 34, 62], [70, 52, 80]],
+    [1, [5, 6, 12], [20, 26, 46], [42, 36, 64]],
+  ];
+  const lerp = (a: number[], b: number[], t: number) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+  const at = (x: number) => {
+    const u = x / w;
+    let k = 0;
+    while (k < keys.length - 2 && u > keys[k + 1][0]) k++;
+    const [x0, t0, m0, h0] = keys[k];
+    const [x1, t1, m1, h1] = keys[k + 1];
+    const t = Math.min(1, Math.max(0, (u - x0) / (x1 - x0)));
+    return [lerp(t0, t1, t), lerp(m0, m1, t), lerp(h0, h1, t)];
+  };
+  const rgb = (v: number[]) => `rgb(${v[0]},${v[1]},${v[2]})`;
+  for (let x = 0; x < w; x += 4) {
+    const [top, mid, hor] = at(x);
+    const g = ctx.createLinearGradient(0, 0, 0, horizon);
+    g.addColorStop(0, rgb(top));
+    g.addColorStop(0.62, rgb(mid));
+    g.addColorStop(1, rgb(hor));
+    ctx.fillStyle = g;
+    ctx.fillRect(x, 0, 5, horizon + 2);
+  }
+  // Stars, denser towards the night.
+  for (let i = 0; i < (w * h) / 700; i++) {
+    const x = r() * w;
+    const night = Math.max(0, (x / w - 0.5) / 0.5);
+    if (r() > night * night) continue;
+    ctx.fillStyle = `rgba(240,236,225,${(0.3 + r() * 0.7) * night})`;
+    ctx.beginPath();
+    ctx.arc(x, r() ** 1.4 * horizon * 0.9, r() ** 3 * 2.4 + 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Sun low on the left, moon high on the right.
+  const sx = w * 0.17;
+  const sun = ctx.createRadialGradient(sx, horizon - h * 0.04, 0, sx, horizon - h * 0.04, h * 0.5);
+  sun.addColorStop(0, 'rgba(255,228,170,1)');
+  sun.addColorStop(0.1, 'rgba(255,214,150,0.9)');
+  sun.addColorStop(0.11, 'rgba(255,200,140,0.3)');
+  sun.addColorStop(1, 'rgba(255,200,140,0)');
+  ctx.fillStyle = sun;
+  ctx.fillRect(0, 0, w * 0.5, horizon);
+  const mx = w * 0.86;
+  const R = h * 0.05;
+  const moon = new OffscreenCanvas(Math.ceil(R * 2 + 4), Math.ceil(R * 2 + 4));
+  const m = moon.getContext('2d')!;
+  m.fillStyle = '#efe8d6';
+  m.beginPath();
+  m.arc(R + 2, R + 2, R, 0, Math.PI * 2);
+  m.fill();
+  m.globalCompositeOperation = 'destination-out';
+  m.beginPath();
+  m.arc(R + 2 + R * 0.45, R + 2 - R * 0.2, R * 0.9, 0, Math.PI * 2);
+  m.fill();
+  ctx.drawImage(moon, mx - R, h * 0.18 - R);
+  // Continuous hills; their colour cools along the way.
+  const hill = (cA: string, cB: string) => {
+    const g = ctx.createLinearGradient(0, 0, w, 0);
+    g.addColorStop(0, cA);
+    g.addColorStop(1, cB);
+    return g;
+  };
+  ridge(ctx, w, horizon - h * 0.02, h * 0.05, r, hill('#8a4a49', '#151829'), horizon + 2);
+  ridge(ctx, w, horizon + h * 0.005, h * 0.02, r, hill('#4b2c3a', '#0a0b14'), horizon + 2);
+  // A small town at dusk on the horizon.
+  let x = w * 0.44;
+  while (x < w * 0.66) {
+    const bw = 30 + r() * 70;
+    const bh = h * (0.03 + r() * 0.09);
+    ctx.fillStyle = '#100f18';
+    ctx.fillRect(x, horizon - bh, bw, bh + 2);
+    for (let wy = horizon - bh + 8; wy < horizon - 6; wy += 16)
+      for (let wx = x + 6; wx < x + bw - 8; wx += 13)
+        if (r() > 0.68) {
+          ctx.fillStyle = `rgba(255,${190 + r() * 40},${110 + r() * 50},${0.55 + r() * 0.45})`;
+          ctx.fillRect(wx, wy, 5, 7);
+        }
+    x += bw + r() * 6;
+  }
+  // Water with reflections under the sun and the moon.
+  const sea = ctx.createLinearGradient(0, 0, w, 0);
+  sea.addColorStop(0, '#3a2a3c');
+  sea.addColorStop(0.6, '#1c1a2c');
+  sea.addColorStop(1, '#07080f');
+  ctx.fillStyle = sea;
+  ctx.fillRect(0, horizon, w, h - horizon);
+  const shade = ctx.createLinearGradient(0, horizon, 0, h);
+  shade.addColorStop(0, 'rgba(0,0,0,0)');
+  shade.addColorStop(1, 'rgba(0,0,0,0.55)');
+  ctx.fillStyle = shade;
+  ctx.fillRect(0, horizon, w, h - horizon);
+  const glints = (cx: number, color: (a: number) => string, n: number) => {
+    for (let i = 0; i < n; i++) {
+      const y = horizon + 6 + r() ** 1.6 * (h - horizon - 10);
+      const spread = (y - horizon) * 1.3 + 20;
+      ctx.fillStyle = color(0.15 + r() * 0.55);
+      ctx.fillRect(cx + (r() - 0.5) * spread, y, 6 + r() * 36, 1.5 + r() * 2);
+    }
+  };
+  glints(sx, (a) => `rgba(255,${190 + r() * 50},${130 + r() * 60},${a})`, 420);
+  glints(mx, (a) => `rgba(230,230,240,${a * 0.6})`, 220);
+  grain(ctx, w, h, 12, r);
+  return jpeg(c);
+}

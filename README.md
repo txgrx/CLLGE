@@ -2,7 +2,7 @@
 
 **Seamless Instagram carousels with photos _and_ video. Free, open source, and everything happens on your device.**
 
-[![Watch the 28-second demo](public/media/how-it-works.jpg)](https://txgrx.github.io/CLLGE/media/how-it-works.mp4)
+[![Watch the 28-second demo](docs/media/how-it-works.jpg)](docs/media/how-it-works.mp4)
 
 Design one long horizontal canvas, drop in a panorama, a clip and some text, and CLLGE cuts it into
 carousel pages that line up exactly when people swipe. Pages with a moving clip become MP4 files (with
@@ -11,10 +11,18 @@ sound); the rest become photos. No account, no watermark, no upload, up to 20 pa
 > Status: early (v0.2). Tested in desktop Chromium; real iPhone/Android checks are still pending —
 > please report what works on your phone.
 
-### New in v0.3
+### New in v0.4
 
-- **Scroll story** on the home page: one panorama is cut, swiped through a phone, gets a clip across the
-  seam and is exported — every step driven by your scroll.
+- **A home page in three acts.** *Developing*: the cover photo develops in a WebGL tray as you scroll, and
+  your cursor ripples the liquid. *One endless panorama*: scrolling moves one continuous world sideways
+  across five slides, with a phone that shows it as a carousel, a clip in a seam and the export. *Film roll*:
+  the templates are frames on a negative that turn positive as they reach you. Saved projects hang on a
+  drying line that sways with your scroll.
+- Entrance transitions into templates, the panorama flow and the editor. Falls back gracefully without
+  WebGL or with *reduce motion*.
+
+### v0.3
+
 - **Demo film** (28 s, with subtle synthesized sound) made entirely in code with Remotion — source in
   [`video/`](video/).
 

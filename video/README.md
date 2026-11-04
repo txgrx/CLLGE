@@ -1,6 +1,6 @@
 # CLLGE demo film
 
-The 28-second "how it works" film on the home page (`public/media/how-it-works.mp4`) is made entirely
+The 28-second "how it works" film shown in the README (`docs/media/how-it-works.mp4`) is made entirely
 in code with [Remotion](https://www.remotion.dev/). Only the rendered MP4 and its poster ship with the
 app; this folder is the source.
 
@@ -20,9 +20,9 @@ node video/scripts/make-assets.mjs
 # 2. film
 cd video
 npm install
-npx remotion render src/index.ts HowItWorks ../public/media/how-it-works.mp4 --codec h264 --audio-codec aac
+npx remotion render src/index.ts HowItWorks ../docs/media/how-it-works.mp4 --codec h264 --audio-codec aac
 # smaller file for the web
-ffmpeg -i ../public/media/how-it-works.mp4 -c:v libx264 -preset slow -crf 27 -movflags +faststart -c:a aac -b:a 96k out.mp4
+ffmpeg -i ../docs/media/how-it-works.mp4 -c:v libx264 -preset slow -crf 27 -movflags +faststart -c:a aac -b:a 96k out.mp4
 ```
 
 In a container without Remotion's own browser, set `REMOTION_BROWSER` to a headless Chrome binary.
