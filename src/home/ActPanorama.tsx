@@ -17,7 +17,16 @@ export function ActPanorama({ world }: { world: World | null }) {
     <section ref={section} className="act act--pano" aria-label="How it works">
       <div className="act__pin">
         <motion.div className="world" style={{ x, width: `${SLIDES * 100}vw` }}>
-          {world && <img className="world__img" src={world.url} alt="" draggable={false} />}
+          {world && (
+            <img
+              className="world__img"
+              src={world.url}
+              alt=""
+              draggable={false}
+              // On narrow screens the whole panorama would not fit 5 slides wide: show it whole, on blue bands.
+              style={{ objectFit: (SLIDES * innerWidth) / innerHeight < world.width / world.height ? 'contain' : 'cover' }}
+            />
+          )}
           <div className="world__shade" />
           {Array.from({ length: SLIDES - 1 }, (_, k) => (
             <span key={k} className="world__seam" style={{ left: `${(k + 1) * 100}vw` }} />

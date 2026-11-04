@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { journey } from '../templates/art';
+import { sampleBlob } from '../templates/samples';
 
 export const SLIDES = 5;
 const H = 1000;
@@ -24,13 +25,18 @@ export function loadWorld(screenAspect: number): Promise<World> {
   let p = cache.get(bucket);
   if (!p) {
     p = (async () => {
-      const width = Math.round(H * bucket * SLIDES);
-      const blob = await journey(width, H, 7);
+      // Prefer the cyanotype panorama (4 panels in public/art); otherwise draw one.
+      const photo = await sampleBlob(['world-1', 'world-2', 'world-3', 'world-4'], 6144);
+      const width = photo ? photo.width : Math.round(H * bucket * SLIDES);
+      const height = photo ? photo.height : H;
+      const blob = photo ? photo.blob : await journey(width, H, 7);
       const full = await createImageBitmap(blob);
-      const pw = Math.min(width, Math.round(H * 2.2));
-      const print = await createImageBitmap(full, 0, 0, pw, H);
+      const pw = Math.min(width, Math.round(height * 2.2));
+      const print = await createImageBitmap(full, 0, 0, pw, height);
       full.close();
-      return { url: URL.createObjectURL(blob), width, height: H, print, printAspect: pw / H, sunInPrint: (width * 0.17) / pw };
+      // The sun sits near 17 % of the drawn world; in the cyanotype it is in the middle of panel 1.
+      const sunX = photo ? width * 0.13 : width * 0.17;
+      return { url: URL.createObjectURL(blob), width, height, print, printAspect: pw / height, sunInPrint: sunX / pw };
     })();
     cache.set(bucket, p);
   }
