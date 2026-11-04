@@ -46,12 +46,17 @@ for (const name of EXPECTED) {
   }
   if (name === 'share') {
     fs.copyFileSync(file, path.resolve('scripts', '.share-source' + path.extname(file)));
-    console.log('share  → kept for scripts/make-share.mjs');
+    // Also used as the backdrop of the home page's closing section.
+    execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', file, '-vf', "scale='min(1800,iw)':-2:flags=lanczos", '-c:v', 'libwebp', '-quality', '74', path.join(out, 'bench.webp')]);
+    console.log('share          → og.jpg (via make-share) + art/bench.webp');
     continue;
   }
-  // Panels and landscapes at 1536 px wide; portraits and squares at 1024 px wide.
+  // The home panorama keeps 1536 px panels (it is shown across five screens);
+  // everything else fits in 1200 px, which is plenty for a template slot.
   const dest = path.join(out, `${name}.webp`);
-  execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', file, '-vf', "scale='min(1536,iw)':-2:flags=lanczos", '-c:v', 'libwebp', '-quality', '80', '-compression_level', '6', dest]);
+  const max = name.startsWith('world-') ? 1536 : 1200;
+  const vf = `scale='if(gt(iw,ih),min(${max},iw),-2)':'if(gt(iw,ih),-2,min(${max},ih))':flags=lanczos`;
+  execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', file, '-vf', vf, '-c:v', 'libwebp', '-quality', '74', '-compression_level', '6', dest]);
   const kb = Math.round(fs.statSync(dest).size / 1024);
   total += kb;
   console.log(`${name.padEnd(14)} → art/${name}.webp  ${kb} KB`);

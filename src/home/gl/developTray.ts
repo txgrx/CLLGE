@@ -1,6 +1,6 @@
 /**
- * A developing tray in WebGL: the print sits under a thin layer of liquid. Scroll
- * progress develops it (highlights first, unevenly, sepia → full colour), the
+ * A rinsing tray in WebGL: the cyanotype sits under a thin layer of water. Scroll
+ * progress develops it (highlights first, unevenly, olive-bronze → Prussian blue), the
  * safelight sweeps across, and the pointer leaves ripples. No library: one quad.
  */
 
@@ -63,9 +63,10 @@ void main() {
   // Development: highlights come up first, unevenly, like a real print.
   float n = fbm(p * 2.2 + 3.0) * 0.38;
   float dev = smoothstep(0.0, 1.0, uP * 1.45 - (1.0 - lum) * 0.6 - n + 0.12);
-  vec3 latent = vec3(0.03, 0.026, 0.026);
-  vec3 sepia = vec3(dot(col, vec3(0.393, 0.769, 0.189)), dot(col, vec3(0.349, 0.686, 0.168)), dot(col, vec3(0.272, 0.534, 0.131)));
-  vec3 midc = mix(sepia * 0.75, col, smoothstep(0.35, 0.95, uP));
+  // Cyanotype: an unwashed print is olive-bronze; rinsing turns it Prussian blue.
+  vec3 latent = vec3(0.025, 0.03, 0.035);
+  vec3 unwashed = vec3(lum * 0.78 + 0.05, lum * 0.8 + 0.05, lum * 0.42 + 0.02);
+  vec3 midc = mix(unwashed * 0.85, col, smoothstep(0.35, 0.95, uP));
   vec3 outc = mix(latent, midc, dev);
 
   // Safelight: a red wash plus a slow beam sweeping the tray.

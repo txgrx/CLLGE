@@ -167,21 +167,52 @@ html.lenis body {
   top: 0;
   left: 0;
   height: 100%;
-  background: linear-gradient(180deg, #0d2c5c 0%, #10356b 48%, #0a1f42 52%, #061430 100%);
+  background: #0b2550;
   will-change: transform;
 }
 .world__img {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  max-width: none;
   user-select: none;
 }
 .world__shade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(14, 14, 15, 0.55) 0%, transparent 32%, transparent 64%, rgba(14, 14, 15, 0.7) 100%);
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(5, 16, 38, 0.62) 0%, rgba(5, 16, 38, 0.12) 34%, transparent 58%, rgba(4, 12, 28, 0.55) 100%);
+}
+.glow {
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  margin: -110px 0 0 -110px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 70, 50, 0.55) 0%, rgba(255, 59, 47, 0.18) 28%, rgba(255, 59, 47, 0) 62%);
+  mix-blend-mode: screen;
+  animation: breathe 3.6s ease-in-out infinite;
+}
+.glow__ring {
+  position: absolute;
+  inset: 70px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 120, 100, 0.7);
+  animation: ripple 3.6s ease-out infinite;
+}
+@keyframes breathe {
+  50% {
+    filter: brightness(1.35);
+  }
+}
+@keyframes ripple {
+  from {
+    transform: scale(0.4);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(2.4);
+    opacity: 0;
+  }
 }
 .world__seam {
   position: absolute;
@@ -208,7 +239,19 @@ html.lenis body {
   padding: 18vh 7vw;
 }
 .w-kicker {
-  color: var(--safelight);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  text-shadow: 0 1px 8px rgba(4, 12, 28, 0.6);
+}
+.w-kicker::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--safelight);
+  box-shadow: 0 0 10px 2px rgba(255, 59, 47, 0.6);
 }
 .w-giant {
   margin-top: 3vh;
@@ -315,6 +358,13 @@ html.lenis body {
   box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.9);
   background: #000;
 }
+.clipwin__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .clipwin__video {
   position: absolute;
   inset: -12%;
@@ -350,6 +400,9 @@ html.lenis body {
   z-index: 1;
   top: 12px;
   left: 14px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(5, 12, 26, 0.65);
   font-style: normal;
   color: var(--ink);
   animation: lamp 1.2s steps(2) infinite;
@@ -613,7 +666,7 @@ html.lenis body {
 }
 .line__wrap {
   position: relative;
-  height: 460px;
+  height: 520px;
   margin-top: 6vh;
 }
 .line__string {
@@ -637,8 +690,8 @@ html.lenis body {
 .print {
   position: absolute;
   top: 26px;
-  width: 190px;
-  margin-left: -95px;
+  width: 200px;
+  margin-left: -100px;
   transform-origin: 50% 0;
 }
 .print__peg {
@@ -665,22 +718,21 @@ html.lenis body {
   cursor: pointer;
   box-shadow: 0 24px 40px -18px rgba(0, 0, 0, 0.85);
 }
-.print__strip {
-  display: flex;
-  gap: 2px;
-  height: 104px;
-  padding: 6px;
-  background: #161618;
+.print__photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  background: #0b2550;
 }
-.print__strip {
-  overflow: hidden;
+.print__photo--blank {
+  background: linear-gradient(180deg, #16305e, #0b1d3d);
 }
-.print__strip span {
-  flex: 1;
-  min-width: 0;
-  aspect-ratio: auto !important;
-  height: 100%;
-  background: linear-gradient(180deg, #2f2a2e, #1a1a1d);
+.print__open--sample {
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.print__open--sample:hover {
+  transform: translateY(6px) rotate(-1deg);
 }
 .print__title {
   font-family: var(--font-display);
@@ -703,6 +755,55 @@ html.lenis body {
 .print__del:hover {
   color: #b42318;
   background: rgba(0, 0, 0, 0.06);
+}
+
+/* ---------------- Finale ---------------- */
+.finale {
+  position: relative;
+  height: 115vh;
+  min-height: 640px;
+  overflow: hidden;
+  display: grid;
+  align-items: center;
+  background: #081733;
+}
+.finale__bg {
+  position: absolute;
+  inset: -10% 0;
+  background-size: cover;
+  background-position: 70% center;
+  will-change: transform;
+}
+.finale__shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(5, 12, 26, 0.92) 0%, rgba(5, 12, 26, 0.6) 38%, rgba(5, 12, 26, 0) 68%), linear-gradient(180deg, var(--bg) 0%, rgba(14, 14, 15, 0) 22%, rgba(14, 14, 15, 0) 78%, var(--bg) 100%);
+}
+.finale__lamp {
+  position: absolute;
+  left: -10vw;
+  top: -10vh;
+  width: 70vw;
+  height: 70vh;
+  background: radial-gradient(closest-side, rgba(255, 59, 47, 0.35), rgba(255, 59, 47, 0));
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+.finale__copy {
+  position: relative;
+  padding: 0 6vw;
+  max-width: 820px;
+}
+.finale__title {
+  margin: 18px 0 34px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(56px, 8.5vw, 150px);
+  line-height: 0.9;
+}
+.finale__title em {
+  color: var(--safelight);
+  font-size: 0.6em;
 }
 
 /* ---------------- Footer ---------------- */
@@ -836,12 +937,10 @@ html.lenis body {
     max-width: 70vw;
   }
   .clipwin {
-    top: 30vh;
-    width: 56vw;
-    left: calc(300vw - 28vw) !important;
+    top: 34vh;
   }
   .clipwin__frame {
-    height: 40vh;
+    height: 36vh;
   }
   .exportbit__files {
     flex-wrap: wrap;
@@ -878,6 +977,16 @@ html.lenis body {
   }
   .line__string {
     display: none;
+  }
+  .finale__bg {
+    background-position: 78% center;
+  }
+  .finale__shade {
+    background: linear-gradient(0deg, rgba(5, 12, 26, 0.95) 0%, rgba(5, 12, 26, 0.55) 55%, rgba(5, 12, 26, 0.2) 100%), linear-gradient(180deg, var(--bg) 0%, rgba(14, 14, 15, 0) 20%);
+  }
+  .finale {
+    align-items: end;
+    padding-bottom: 12vh;
   }
   .line__prints {
     display: grid;

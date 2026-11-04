@@ -1,10 +1,10 @@
 import { AnimatePresence, motion, useScroll, useTransform } from 'motion/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { OpenOptions } from '../App';
 import { APP_NAME, REPO_URL } from '../config';
 import type { Project } from '../model/types';
 import { deleteProject, listProjects, loadProject, requestPersistence, type ProjectSummary } from '../storage/db';
-import type { TemplateSpec } from '../templates/catalog';
+import { TEMPLATES, type TemplateSpec } from '../templates/catalog';
 import { Icon } from '../ui/Icon';
 import { ActDevelop } from './ActDevelop';
 import { ActFilmRoll } from './ActFilmRoll';
@@ -111,7 +111,20 @@ export function HomePage({ onOpen, onPanorama }: Props) {
       )}
 
       <ActFilmRoll opening={opening} onPick={openTemplate} />
-      <DryingLine projects={projects} onOpen={(id) => void openSaved(id)} onDelete={(p) => void remove(p)} />
+      <DryingLine
+        projects={projects}
+        onOpen={(id) => void openSaved(id)}
+        onDelete={(p) => void remove(p)}
+        onSample={() => {
+          const t = TEMPLATES.find((x) => x.id === 'drying-line');
+          if (t) openTemplate(t, new DOMRect(innerWidth / 2 - 100, innerHeight / 2 - 125, 200, 250));
+        }}
+      />
+      <Finale
+        onPanorama={(e) => void enter({ kind: 'circle', ...centerOf(e.currentTarget) }, onPanorama)}
+        onBlank={() => setBlank(true)}
+        onTemplates={() => document.getElementById('roll-h')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+      />
       <Footer />
 
       <AnimatePresence>
@@ -129,6 +142,41 @@ export function HomePage({ onOpen, onPanorama }: Props) {
       </AnimatePresence>
       <Cursor />
     </div>
+  );
+}
+
+/** Closing scene: three prints on the darkroom bench, and the way in. */
+function Finale({ onPanorama, onBlank, onTemplates }: { onPanorama(e: React.MouseEvent<HTMLButtonElement>): void; onBlank(): void; onTemplates(): void }) {
+  const ref = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] });
+  const y = useTransform(scrollYProgress, [0, 1], ['-8%', '8%']);
+  const scale = useTransform(scrollYProgress, [0, 0.5, 1], [1.12, 1.02, 1.08]);
+  const glow = useTransform(scrollYProgress, [0.2, 0.55], [0, 1]);
+  return (
+    <section ref={ref} className="finale" aria-labelledby="finale-h">
+      <motion.div className="finale__bg" style={{ y, scale, backgroundImage: `url(${import.meta.env.BASE_URL}art/bench.webp)` }} aria-hidden />
+      <motion.div className="finale__lamp" style={{ opacity: glow }} aria-hidden />
+      <div className="finale__shade" aria-hidden />
+      <motion.div className="finale__copy" initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.4 }} transition={{ type: 'spring', stiffness: 120, damping: 20 }}>
+        <p className="mono">Lights on</p>
+        <h2 id="finale-h" className="finale__title">
+          Your turn.
+          <br />
+          <em>Make it keep going.</em>
+        </h2>
+        <div className="hero2__actions">
+          <button className="btn btn--primary btn--lg" onClick={onPanorama} data-cursor="Split">
+            <Icon name="pano" /> Split your own panorama
+          </button>
+          <button className="btn btn--lg btn--glass" onClick={onBlank}>
+            <Icon name="plus" /> Start from scratch
+          </button>
+          <button className="btn btn--lg btn--ghost" onClick={onTemplates}>
+            Browse the templates ↑
+          </button>
+        </div>
+      </motion.div>
+    </section>
   );
 }
 

@@ -16,7 +16,12 @@ Milestones follow the product guide (§11). Each item lists what must work to cl
 ## Done in v0.2
 
 - Panorama splitter flow (suggested slide count, live cut lines, drag to reframe, cover/closing, swipe preview).
-- Eight original templates with code-drawn sample art; slots with one-tap fill (photo or clip).
+- Eight original templates with sample art; slots with one-tap fill (photo or clip).
+
+## Done in v0.5
+
+- Cyanotype sample images (GPT Image 2) for the home panorama, all templates and the share card.
+- [ ] Generate `clouds-a` (first panel of *Window seat*); the template uses `clouds-b` alone for now.
 - "Darkroom" redesign with spring motion, bundled fonts, custom icons, page filmstrip.
 
 ## Next

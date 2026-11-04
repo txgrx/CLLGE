@@ -25,20 +25,23 @@ export function loadSampleBitmap(key: string): Promise<ImageBitmap | null> {
 
 /**
  * Load one image, or several joined side by side (a panorama made of panels), and
- * render it to a JPEG of the requested width. Neighbouring panels are cross-faded
- * over `blend` of a panel's width to hide small mismatches at the joins.
+ * render it to a JPEG of the requested width. `trim` crops each panel's left and
+ * right edge (generated prints have a lighter paper border); neighbouring panels
+ * are cross-faded over `blend` of a panel's width so tone changes stay gradual.
  * Returns null if any panel is missing.
  */
-export async function sampleBlob(keys: string | string[], targetWidth: number, blend = 0.03): Promise<{ blob: Blob; width: number; height: number } | null> {
+export async function sampleBlob(keys: string | string[], targetWidth: number, blend = 0.03, trim = 0): Promise<{ blob: Blob; width: number; height: number } | null> {
   const list = Array.isArray(keys) ? keys : [keys];
   const bitmaps = await Promise.all(list.map(loadSampleBitmap));
   if (bitmaps.some((b) => !b)) return null;
   const bms = bitmaps as ImageBitmap[];
-  const h0 = bms[0].height;
+  const t = list.length > 1 ? trim : 0;
+  const src = bms.map((b) => ({ sx: b.width * t, sw: b.width * (1 - 2 * t), h: b.height }));
+  const h0 = src[0].h;
   // Scale every panel to the first panel's height, then overlap by `blend`.
-  const widths = bms.map((b) => (b.width * h0) / b.height);
+  const widths = src.map((r) => (r.sw * h0) / r.h);
   const overlap = Math.round(widths[0] * blend);
-  const fullW = Math.round(widths.reduce((s, w) => s + w, 0) - overlap * (bms.length - 1));
+  const fullW = Math.round(widths.reduce((sum, w) => sum + w, 0) - overlap * (bms.length - 1));
   const scale = Math.min(1, targetWidth / fullW);
   const W = Math.max(8, Math.round(fullW * scale));
   const H = Math.max(8, Math.round(h0 * scale));
@@ -47,20 +50,24 @@ export async function sampleBlob(keys: string | string[], targetWidth: number, b
   let x = 0;
   bms.forEach((b, i) => {
     const w = widths[i] * scale;
+    const r = src[i];
     if (i === 0) {
-      ctx.drawImage(b, 0, 0, w, H);
+      ctx.drawImage(b, r.sx, 0, r.sw, r.h, 0, 0, w, H);
     } else {
       // Draw the panel into its own canvas with a fading left edge, then composite.
       const o = overlap * scale;
       const tmp = new OffscreenCanvas(Math.ceil(w), H);
-      const t = tmp.getContext('2d')!;
-      t.drawImage(b, 0, 0, w, H);
-      t.globalCompositeOperation = 'destination-in';
-      const g = t.createLinearGradient(0, 0, o, 0);
-      g.addColorStop(0, 'rgba(0,0,0,0)');
-      g.addColorStop(1, 'rgba(0,0,0,1)');
-      t.fillStyle = g;
-      t.fillRect(0, 0, Math.ceil(w), H);
+      const tc = tmp.getContext('2d')!;
+      tc.drawImage(b, r.sx, 0, r.sw, r.h, 0, 0, w, H);
+      tc.globalCompositeOperation = 'destination-in';
+      const g = tc.createLinearGradient(0, 0, o, 0);
+      // Smoothstep-like ramp: no visible start or end of the blend.
+      for (let k = 0; k <= 8; k++) {
+        const u = k / 8;
+        g.addColorStop(u, `rgba(0,0,0,${u * u * (3 - 2 * u)})`);
+      }
+      tc.fillStyle = g;
+      tc.fillRect(0, 0, Math.ceil(w), H);
       ctx.drawImage(tmp, x - o, 0);
       x -= o;
     }

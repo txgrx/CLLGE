@@ -66,7 +66,7 @@ class Composer {
   async slot(kind: SlotKind, name: string, rect: Box, art: (w: number, h: number) => Promise<Blob>, extra: Partial<ImageLayer> = {}, sample?: string | string[]) {
     const aw = Math.max(8, Math.round(Math.min(2400, rect.width * 1.1) * this.artScale));
     const ah = Math.round((aw * rect.height) / rect.width);
-    const photo = sample ? await sampleBlob(sample, Math.max(aw, Math.round(ah * 3))) : null;
+    const photo = sample ? await sampleBlob(sample, Math.max(aw, Math.round(ah * 3)), 0.16, 0.02) : null;
     const a = photo ? await this.asset(`${name}.jpg`, photo.blob, photo.width, photo.height) : await this.asset(`${name}.jpg`, art(aw, ah), aw, ah);
     return this.push({ ...base(rect), type: 'image', name, assetId: a.id, fit: 'cover', crop: { focusX: 0.5, focusY: 0.5, zoom: 1 }, radius: 0, slot: kind, ...extra } as ImageLayer);
   }
@@ -173,7 +173,7 @@ export const TEMPLATES: TemplateSpec[] = [
     pages: 3,
     async build(o) {
       const c = new Composer('Window seat', 3, '#05060C', o?.artScale);
-      await c.slot('image', 'Background', { x: 0, y: 0, width: 3 * W, height: H }, (w, h) => art.nightSky(w, h, 5), {}, ['clouds-a', 'clouds-b']);
+      await c.slot('image', 'Background', { x: 0, y: 0, width: 3 * W, height: H }, (w, h) => art.nightSky(w, h, 5), {}, 'clouds-b');
       c.shape('Window frame', { x: W + 170, y: 270, width: 740, height: 900 }, '#1F1F22', { radius: 230 });
       await c.slot('video', 'Your clip', { x: W + 200, y: 300, width: 680, height: 840 }, (w, h) => art.coast(w, h, 23), { radius: 200 }, 'window-view');
       c.text('Title', { x: 90, y: 1080, width: 900, height: 200 }, 'window\nseat', { fontSize: 130, lineHeight: 0.9 });
@@ -188,10 +188,10 @@ export const TEMPLATES: TemplateSpec[] = [
     idea: 'A clip that stands in the seam: swipe and walk through it.',
     pages: 3,
     async build(o) {
-      const c = new Composer('Doorway', 3, '#141414', o?.artScale);
+      const c = new Composer('Doorway', 3, '#0C1F42', o?.artScale);
       await c.slot('video', 'Your clip', { x: 690, y: 300, width: 780, height: 900 }, (w, h) => art.dunes(w, h, 31), {}, 'doorway-view');
       await c.decor('Door frame', { x: 650, y: 260, width: 860, height: 940 }, (s) => art.archFrame(860 * s, 940 * s, 40 * s, '#E9E2D3'), 860, 940);
-      c.shape('Floor', { x: 0, y: 1199, width: 3 * W, height: 2 }, '#3A3936');
+      c.shape('Floor', { x: 0, y: 1199, width: 3 * W, height: 2 }, '#2A4A7F');
       c.text('Entry', { x: 650, y: 1225, width: 860, height: 50 }, 'ENTRY  ·  02', { fontFamily: MONO, fontSize: 24, color: '#8C8981', align: 'center' });
       c.text('Title', { x: 90, y: 110, width: 520, height: 300 }, 'step\nthrough', { fontSize: 140, lineHeight: 0.88 });
       c.text('Folio', { x: 2 * W + 90, y: 110, width: 900, height: 60 }, '01 — 02 — 03', { fontFamily: MONO, fontSize: 28, color: '#8C8981', align: 'right' });
@@ -240,7 +240,7 @@ export const TEMPLATES: TemplateSpec[] = [
       const tilts = [-4, 3, -2, 5, -3];
       for (let i = 0; i < centers.length; i++) {
         const top = 80 + art.dryingLineY(centers[i], lw, lh, sag) + 10;
-        await c.slot('image', `Print ${i + 1}`, { x: centers[i] - 210, y: top, width: 420, height: 540, rotation: tilts[i] }, (w, h) => art.still(w, h, 300 + i), {}, `print-${i + 1}`);
+        await c.slot('image', `Print ${i + 1}`, { x: centers[i] - 210, y: top, width: 420, height: 540, rotation: tilts[i] }, (w, h) => art.still(w, h, 300 + i), i === 4 ? { crop: { focusX: 0.62, focusY: 0.5, zoom: 1 } } : {}, `print-${i + 1}`);
       }
       c.text('Title', { x: 2 * W + 90, y: 1090, width: 900, height: 160 }, 'still drying', { fontSize: 120, align: 'right', color: '#EDEBE6' });
       c.text('Note', { x: 90, y: 1180, width: 800, height: 60 }, 'DEV 7:30  ·  STOP 0:30  ·  FIX 5:00', { fontFamily: MONO, fontSize: 26, color: '#8C8981' });
@@ -263,7 +263,7 @@ export const TEMPLATES: TemplateSpec[] = [
       await c.slot('image', 'Lead photo', { x: 70, y: 620, width: 760, height: 660 }, (w, h) => art.botanical(w, h, 21), {}, 'issue-lead');
       await c.slot('image', 'Across the fold', { x: 870, y: 760, width: 520, height: 420, rotation: -2 }, (w, h) => art.still(w, h, 41), {}, 'issue-detail');
       await c.slot('image', 'Tall photo', { x: W + 400, y: 620, width: 610, height: 660 }, (w, h) => art.roofline(w, h, 12), {}, 'issue-tall');
-      await c.slot('image', 'Closing photo', { x: 2 * W + 420, y: 0, width: 660, height: H }, (w, h) => art.dunes(w, h, 19), {}, 'issue-closing');
+      await c.slot('image', 'Closing photo', { x: 2 * W + 420, y: 0, width: 660, height: H }, (w, h) => art.dunes(w, h, 19), { crop: { focusX: 0.78, focusY: 0.5, zoom: 1 } }, 'issue-closing');
       c.text('Pull quote', { x: 2 * W + 60, y: 300, width: 340, height: 600 }, '“We went\nfor the light\nand stayed\nfor the\nnoise.”', { fontSize: 66, color: ink, lineHeight: 1.04 });
       c.text('Byline', { x: 2 * W + 60, y: 1180, width: 340, height: 60 }, 'words & photos — you', { fontFamily: MONO, fontSize: 20, color: '#5A554C' });
       return c.done();
@@ -293,7 +293,7 @@ export const TEMPLATES: TemplateSpec[] = [
       for (let i = 0; i < polas.length; i++) {
         const p = polas[i];
         c.shape(`Polaroid ${i + 1}`, p, '#F4F1EA');
-        await c.slot('image', `Photo ${i + 1}`, attach(p, 26, 26, p.width - 52, p.width - 52), (w, h) => (i % 2 ? art.still(w, h, 500 + i) : art.botanical(w, h, 600 + i)), {}, `polaroid-${i + 1}`);
+        await c.slot('image', `Photo ${i + 1}`, attach(p, 26, 26, p.width - 52, p.width - 52), (w, h) => (i % 2 ? art.still(w, h, 500 + i) : art.botanical(w, h, 600 + i)), i === 2 ? { crop: { focusX: 0.08, focusY: 0.5, zoom: 1 } } : {}, `polaroid-${i + 1}`);
         await c.decor(`Tape ${i + 1}`, attach(p, p.width / 2 - 110, -34, 220, 70), (s) => art.tape(220 * s, 70 * s, 70 + i), 220, 70);
       }
       c.text('Date', { x: 90, y: 110, width: 600, height: 50 }, '07.08 — 21.08', { fontFamily: MONO, fontSize: 28, color: '#3B362E' });
