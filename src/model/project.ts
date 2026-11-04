@@ -6,6 +6,7 @@ import {
   type Asset,
   type ImageLayer,
   type Layer,
+  type MediaLayer,
   type Project,
   type ShapeLayer,
   type TextLayer,
@@ -212,6 +213,52 @@ export function shapeLayer(p: Project, pageIndex: number): ShapeLayer {
     fill: '#E07A5F',
     radius: 24,
   };
+}
+
+/** Slots that still show sample art, back to front. */
+export function unfilledSlots(p: Project): MediaLayer[] {
+  return p.layers.filter((l): l is MediaLayer => (l.type === 'image' || l.type === 'video') && !!l.slot);
+}
+
+/**
+ * Put the user's photo or clip into an existing media layer (a template slot or any
+ * photo/video). The frame — position, size, rotation, corners, opacity, name order —
+ * is kept; the content is re-fitted around the centre. A photo slot accepts a clip
+ * and becomes a video layer (and vice versa). The previous asset is dropped if unused.
+ */
+export function fillSlot(p: Project, layerId: string, asset: Asset): Project {
+  const target = p.layers.find((l) => l.id === layerId);
+  if (!target || (target.type !== 'image' && target.type !== 'video')) return p;
+  const frame = {
+    id: target.id,
+    name: asset.name,
+    x: target.x,
+    y: target.y,
+    width: target.width,
+    height: target.height,
+    rotation: target.rotation,
+    opacity: target.opacity,
+    visible: target.visible,
+    locked: target.locked,
+    assetId: asset.id,
+    fit: target.fit,
+    crop: { focusX: 0.5, focusY: 0.5, zoom: 1 },
+    radius: target.radius,
+  };
+  let next: Layer;
+  if (asset.type === 'image') {
+    next = { ...frame, type: 'image' };
+  } else {
+    const prev = target.type === 'video' ? target : null;
+    next = {
+      ...frame,
+      type: 'video',
+      clip: { inMs: 0, outMs: asset.durationMs, startMs: prev?.clip.startMs ?? 0, gain: asset.hasAudio ? (prev?.clip.gain || 1) : 0, endMode: 'hold' },
+      audioOrder: prev?.audioOrder ?? nextAudioOrder(p),
+    };
+  }
+  const withAsset = addAsset(p, asset);
+  return removeLayers({ ...withAsset, layers: withAsset.layers.map((l) => (l.id === layerId ? next : l)) }, []);
 }
 
 /** Exact media rectangle for a media layer, re-exported for the inspector. */

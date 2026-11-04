@@ -24,6 +24,11 @@ export class MediaLibrary {
     for (const fn of this.listeners) fn();
   }
 
+  /** Ask views to redraw (e.g. once web fonts have loaded). */
+  touch(): void {
+    this.emit();
+  }
+
   has(assetId: string): boolean {
     return this.blobs.has(assetId);
   }

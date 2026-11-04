@@ -13,6 +13,12 @@ Milestones follow the product guide (§11). Each item lists what must work to cl
   cancel and retry that keeps finished pages. *The guide's Vejer case exports exactly JPG–MP4–JPG: 1080×1350,
   180 frames, 6 s, audible tone/silence, frame-accurate trim (e2e).*
 
+## Done in v0.2
+
+- Panorama splitter flow (suggested slide count, live cut lines, drag to reframe, cover/closing, swipe preview).
+- Eight original templates with code-drawn sample art; slots with one-tap fill (photo or clip).
+- "Darkroom" redesign with spring motion, bundled fonts, custom icons, page filmstrip.
+
 ## Next
 
 ### M0 follow-up · real devices
@@ -27,8 +33,8 @@ Milestones follow the product guide (§11). Each item lists what must work to cl
 - [ ] Re-link a missing original.
 
 ### M4 · First public release
-- [ ] Three original templates (travel postcard across pages 1–2, contact strip, chronicle with a central clip) as editable data.
-- [ ] Template slots vs. decorative frames kept separate (cf. SCRL Frame Creator: image slots, overlays, groups, crop/radius masks).
+- [ ] More templates per family; save your own layout as a template (without your photos).
+- [ ] Masks beyond rounded rectangles (arch, circle, torn edge) for slots.
 - [ ] "Review seam" mode with a draggable seam position on screen.
 - [ ] Installable PWA with offline editing and export (test in airplane mode).
 - [ ] Bundle split: load Mediabunny only when a clip is imported or exported.

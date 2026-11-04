@@ -1,4 +1,8 @@
+import { motion } from 'motion/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Seg } from '../ui/controls';
+import { Icon } from '../ui/Icon';
+import { spring } from '../ui/motion';
 import { planPages } from '../model/plan';
 import { clipEndMs, holdTimeMs, sourceTimeMs } from '../model/timing';
 import type { VideoLayer } from '../model/types';
@@ -19,6 +23,7 @@ export function Preview({ onClose, startPage = 0 }: { onClose(): void; startPage
   const [playing, setPlaying] = useState(true);
   const [muted, setMuted] = useState(false);
   const canvas = useRef<HTMLCanvasElement>(null);
+  const dir = useRef(1);
   const t0 = useRef(performance.now());
   const [clock, setClock] = useState(0);
   const { pageWidth: W, pageHeight: H } = project.canvas;
@@ -146,8 +151,13 @@ export function Preview({ onClose, startPage = 0 }: { onClose(): void; startPage
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
-      else if (e.key === 'ArrowRight') setPage((p) => Math.min(plans.length - 1, p + 1));
-      else if (e.key === 'ArrowLeft') setPage((p) => Math.max(0, p - 1));
+      else if (e.key === 'ArrowRight') {
+        dir.current = 1;
+        setPage((p) => Math.min(plans.length - 1, p + 1));
+      } else if (e.key === 'ArrowLeft') {
+        dir.current = -1;
+        setPage((p) => Math.max(0, p - 1));
+      }
       else if (e.key === ' ') {
         e.preventDefault();
         setPlaying((p) => !p);
@@ -159,21 +169,37 @@ export function Preview({ onClose, startPage = 0 }: { onClose(): void; startPage
 
   const swipeStart = useRef<number | null>(null);
   const maxPage = mode === 'seam' ? Math.max(0, plans.length - 2) : plans.length - 1;
+  const go = (d: 1 | -1) => {
+    dir.current = d;
+    setPage((p) => Math.min(maxPage, Math.max(0, p + d)));
+  };
 
   return (
-    <div className="modal" role="dialog" aria-modal="true" aria-label="Preview">
-      <div className="modal__panel preview">
-        <header className="modal__head">
-          <div className="seg" role="group" aria-label="Preview mode">
-            <button className={mode === 'swipe' ? 'is-active' : ''} onClick={() => setMode('swipe')}>
-              Swipe
-            </button>
-            <button className={mode === 'seam' ? 'is-active' : ''} disabled={plans.length < 2} onClick={() => setMode('seam')}>
-              Seams at 100 %
-            </button>
-          </div>
-          <button className="btn btn--ghost" onClick={onClose} aria-label="Close preview">
-            Close
+    <motion.div className="scrim" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+      <motion.div
+        className="sheet preview"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Preview"
+        initial={{ y: 40, opacity: 0, scale: 0.98 }}
+        animate={{ y: 0, opacity: 1, scale: 1 }}
+        exit={{ y: 20, opacity: 0, scale: 0.98 }}
+        transition={spring}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="sheet__head">
+          <Seg<'swipe' | 'seam'>
+            label="Preview mode"
+            value={mode}
+            onChange={setMode}
+            disabled={(v) => v === 'seam' && plans.length < 2}
+            options={[
+              { value: 'swipe', label: 'Swipe' },
+              { value: 'seam', label: 'Seams at 100%' },
+            ]}
+          />
+          <button className="btn btn--icon btn--ghost" onClick={onClose} aria-label="Close preview">
+            <Icon name="close" />
           </button>
         </header>
         <div
@@ -183,37 +209,58 @@ export function Preview({ onClose, startPage = 0 }: { onClose(): void; startPage
             if (swipeStart.current === null) return;
             const dx = e.clientX - swipeStart.current;
             swipeStart.current = null;
-            if (dx < -40) setPage((p) => Math.min(maxPage, p + 1));
-            if (dx > 40) setPage((p) => Math.max(0, p - 1));
+            if (dx < -40) go(1);
+            if (dx > 40) go(-1);
           }}
         >
-          <canvas ref={canvas} className="preview__canvas" data-testid="preview-canvas" />
+          {mode === 'swipe' ? (
+            <div className="phone preview__phone">
+              <div className="phone__screen">
+                <div className="phone__bar">
+                  <span className="phone__avatar" />
+                  <span>your.handle</span>
+                </div>
+                <div className="phone__post">
+                  <motion.div key={page} initial={{ x: dir.current * 80, opacity: 0.4 }} animate={{ x: 0, opacity: 1 }} transition={spring}>
+                    <canvas ref={canvas} className="preview__canvas" data-testid="preview-canvas" />
+                  </motion.div>
+                </div>
+                <div className="dots" aria-hidden>
+                  {plans.map((_, k) => (
+                    <span key={k} className={k === page ? 'is-on' : ''} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <canvas ref={canvas} className="preview__canvas" data-testid="preview-canvas" />
+          )}
         </div>
         <footer className="preview__bar">
-          <button className="btn" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0} aria-label="Previous page">
-            ‹
+          <button className="btn btn--icon" onClick={() => go(-1)} disabled={page === 0} aria-label="Previous slide">
+            <Icon name="back" />
           </button>
-          <span className="preview__count">{mode === 'swipe' ? `${page + 1} of ${plans.length}` : `Seam ${seamIndex + 1} | ${seamIndex + 2}`}</span>
-          <button className="btn" onClick={() => setPage((p) => Math.min(maxPage, p + 1))} disabled={page >= maxPage} aria-label="Next page">
-            ›
+          <span className="mono">{mode === 'swipe' ? `${String(page + 1).padStart(2, '0')} / ${String(plans.length).padStart(2, '0')}` : `Seam ${seamIndex + 1} | ${seamIndex + 2}`}</span>
+          <button className="btn btn--icon" onClick={() => go(1)} disabled={page >= maxPage} aria-label="Next slide">
+            <Icon name="next" />
           </button>
           <span className={`badge badge--${plan.kind}`}>{plan.kind === 'video' ? 'Video' : 'Photo'}</span>
           {duration > 0 && (
             <>
-              <button className="btn" onClick={() => setPlaying((p) => !p)}>
-                {playing ? 'Pause' : 'Play'}
+              <button className="btn btn--icon" onClick={() => setPlaying((p) => !p)} aria-label={playing ? 'Pause' : 'Play'}>
+                <Icon name={playing ? 'pause' : 'play'} />
               </button>
-              <button className="btn" onClick={() => setMuted((m) => !m)} aria-pressed={muted}>
-                {muted ? 'Unmute' : 'Mute'}
+              <button className="btn btn--icon" onClick={() => setMuted((m) => !m)} aria-pressed={muted} aria-label={muted ? 'Unmute' : 'Mute'}>
+                <Icon name={muted ? 'mute' : 'sound'} />
               </button>
-              <span className="preview__time">
+              <span className="mono">
                 {(clock / 1000).toFixed(1)} / {(duration / 1000).toFixed(1)} s
               </span>
             </>
           )}
         </footer>
-        {mode === 'seam' && <p className="hint">The two pages around a seam, side by side at full resolution and at the same instant. Lines should continue without a jump.</p>}
-      </div>
-    </div>
+        {mode === 'seam' && <p className="hint" style={{ marginTop: 10 }}>Two neighbouring slides at full resolution, at the same instant. Lines should carry on without a jump.</p>}
+      </motion.div>
+    </motion.div>
   );
 }

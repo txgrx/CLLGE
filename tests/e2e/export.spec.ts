@@ -57,3 +57,15 @@ for (const pages of [3, 20]) {
     expect(r.rotatedCornerMaxDiff).toBeLessThanOrEqual(32);
   });
 }
+
+test('every template builds: slots, assets present, nothing off-canvas', async ({ page }) => {
+  const r = await page.evaluate(() => (window as any).runTemplates(0.1));
+  expect(r).toHaveLength(8);
+  for (const t of r) {
+    expect(t.missing, t.id).toBe(0);
+    expect(t.outside, t.id).toEqual([]);
+    expect(t.slots.length, t.id).toBeGreaterThan(0);
+  }
+  const doorway = r.find((t: any) => t.id === 'doorway');
+  expect(doorway.slots).toContain('video');
+});

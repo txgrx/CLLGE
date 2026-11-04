@@ -4,13 +4,17 @@ import { updateLayer } from '../model/project';
 import type { Layer, Project } from '../model/types';
 import { drawRegion } from '../render/drawWindow';
 import { library } from '../media/library';
+import { Icon } from '../ui/Icon';
 import { useEditor } from './store';
 
-const PAD = 48; // screen px around the strip
+export const PAD = 48; // screen px around the strip
 const SNAP_PX = 8; // snap tolerance in *screen* pixels, converted with the zoom
 
 interface Props {
-  onDropFiles(files: File[], pageIndex: number): void;
+  /** Files dropped on the stage; `slotId` when they landed on an empty template slot. */
+  onDropFiles(files: File[], pageIndex: number, slotId?: string): void;
+  /** The "+ Photo / + Clip" pill of a slot was pressed. */
+  onSlot(layerId: string): void;
   cropMode: boolean;
   setCropMode(v: boolean): void;
 }
@@ -28,7 +32,7 @@ interface Guides {
   y: number[];
 }
 
-export function Stage({ onDropFiles, cropMode, setCropMode }: Props) {
+export function Stage({ onDropFiles, onSlot, cropMode, setCropMode }: Props) {
   const project = useEditor((s) => s.project)!;
   const zoom = useEditor((s) => s.zoom);
   const selection = useEditor((s) => s.selection);
@@ -66,15 +70,18 @@ export function Stage({ onDropFiles, cropMode, setCropMode }: Props) {
       const p = useEditor.getState().project;
       if (!p) return;
       const z = useEditor.getState().zoom;
-      const x0 = Math.max(0, (sc.scrollLeft - PAD) / z);
-      const y0 = Math.max(0, (sc.scrollTop - PAD) / z);
-      const x1 = Math.min(p.pages.length * p.canvas.pageWidth, (sc.scrollLeft + vw - PAD) / z);
-      const y1 = Math.min(p.canvas.pageHeight, (sc.scrollTop + vh - PAD) / z);
+      // The world is centred in the scroller when smaller than it (flex auto margins).
+      const ox = (world.current?.offsetLeft ?? 0) + PAD;
+      const oy = (world.current?.offsetTop ?? 0) + PAD;
+      const x0 = Math.max(0, (sc.scrollLeft - ox) / z);
+      const y0 = Math.max(0, (sc.scrollTop - oy) / z);
+      const x1 = Math.min(p.pages.length * p.canvas.pageWidth, (sc.scrollLeft + vw - ox) / z);
+      const y1 = Math.min(p.canvas.pageHeight, (sc.scrollTop + vh - oy) / z);
       if (x1 <= x0 || y1 <= y0) return;
       drawRegion(ctx, p, { x: x0, y: y0, width: x1 - x0, height: y1 - y0 }, 0, library.sources(), {
         scale: z * dpr,
-        originX: (PAD + x0 * z - sc.scrollLeft) * dpr,
-        originY: (PAD + y0 * z - sc.scrollTop) * dpr,
+        originX: (ox + x0 * z - sc.scrollLeft) * dpr,
+        originY: (oy + y0 * z - sc.scrollTop) * dpr,
         showAllClips: true,
       });
     });
@@ -92,15 +99,16 @@ export function Stage({ onDropFiles, cropMode, setCropMode }: Props) {
   const zoomAt = useCallback((newZoom: number, clientX: number, clientY: number) => {
     const sc = scroller.current;
     if (!sc) return;
-    const r = sc.getBoundingClientRect();
     const z = useEditor.getState().zoom;
-    const wx = (clientX - r.left + sc.scrollLeft - PAD) / z;
-    const wy = (clientY - r.top + sc.scrollTop - PAD) / z;
+    const wr = world.current!.getBoundingClientRect();
+    const wx = (clientX - wr.left - PAD) / z;
+    const wy = (clientY - wr.top - PAD) / z;
     useEditor.getState().setZoom(newZoom);
     const nz = useEditor.getState().zoom;
     requestAnimationFrame(() => {
-      sc.scrollLeft = wx * nz + PAD - (clientX - r.left);
-      sc.scrollTop = wy * nz + PAD - (clientY - r.top);
+      const after = world.current!.getBoundingClientRect();
+      sc.scrollLeft += after.left + PAD + wx * nz - clientX;
+      sc.scrollTop += after.top + PAD + wy * nz - clientY;
     });
   }, []);
 
@@ -267,7 +275,16 @@ export function Stage({ onDropFiles, cropMode, setCropMode }: Props) {
     const files = [...e.dataTransfer.files];
     if (!files.length) return;
     const pt = toWorld(e.clientX, e.clientY);
-    onDropFiles(files, Math.min(N - 1, Math.max(0, Math.floor(pt.x / W))));
+    const p = useEditor.getState().project!;
+    let slotId: string | undefined;
+    for (let i = p.layers.length - 1; i >= 0; i--) {
+      const l = p.layers[i];
+      if (l.visible && layerContainsPoint(l, pt)) {
+        if ((l.type === 'image' || l.type === 'video') && l.slot) slotId = l.id;
+        break;
+      }
+    }
+    onDropFiles(files, Math.min(N - 1, Math.max(0, Math.floor(pt.x / W))), slotId);
   };
 
   const selected = selection.length === 1 ? project.layers.find((l) => l.id === selection[0]) : undefined;
@@ -304,8 +321,8 @@ export function Stage({ onDropFiles, cropMode, setCropMode }: Props) {
             {project.pages.map((pg, i) => (
               <g key={pg.id}>
                 {i > 0 && <line x1={i * W} x2={i * W} y1={-16 / zoom} y2={H + 16 / zoom} className="ov-seam" />}
-                <text x={i * W + W / 2} y={-14 / zoom} className="ov-label" style={{ fontSize: 12 / zoom }}>
-                  {i + 1}
+                <text x={i * W + W / 2} y={-16 / zoom} className="ov-label" style={{ fontSize: 11 / zoom }}>
+                  {String(i + 1).padStart(2, '0')}
                 </text>
               </g>
             ))}
@@ -317,6 +334,22 @@ export function Stage({ onDropFiles, cropMode, setCropMode }: Props) {
             ))}
             {selected && <SelectionBox layer={selected} hs={hs} crop={cropMode} />}
           </svg>
+          {project.layers.map((l) =>
+            (l.type === 'image' || l.type === 'video') && l.slot && l.visible ? (
+              <button
+                key={l.id}
+                className={`slot-pill ${l.width * zoom < 120 ? 'slot-pill--compact' : ''}`}
+                style={{ left: PAD + (l.x + l.width / 2) * zoom, top: PAD + (l.y + l.height / 2) * zoom }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => onSlot(l.id)}
+                data-testid={`slot-${l.id}`}
+                aria-label={`${l.slot === 'video' ? 'Add a clip' : 'Add a photo'} to ${l.name ?? 'slot'}`}
+              >
+                <Icon name={l.slot === 'video' ? 'clip' : 'plus'} size={16} />
+                {l.width * zoom >= 120 && (l.slot === 'video' ? 'Clip' : 'Photo')}
+              </button>
+            ) : null,
+          )}
         </div>
       </div>
     </div>

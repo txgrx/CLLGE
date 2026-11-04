@@ -3,14 +3,10 @@ import { planPages } from '../model/plan';
 import { addPageAtEnd, removeLastPage, updateLayer } from '../model/project';
 import { clipEndMs } from '../model/timing';
 import { MAX_PAGES, type Layer, type Project, type VideoLayer } from '../model/types';
+import { TEXT_FONTS } from '../ui/fonts';
 import { useEditor } from './store';
 
-const FONTS = [
-  { label: 'Sans', value: 'Inter, system-ui, sans-serif' },
-  { label: 'Serif', value: 'Georgia, "Times New Roman", serif' },
-  { label: 'Mono', value: 'ui-monospace, "SF Mono", Menlo, monospace' },
-  { label: 'Rounded', value: '"Arial Rounded MT Bold", "Trebuchet MS", sans-serif' },
-];
+const FONTS = TEXT_FONTS;
 
 export function Inspector({ onReplace }: { onReplace(layerId: string): void }) {
   const project = useEditor((s) => s.project)!;

@@ -9,6 +9,10 @@ import { importImage, importVideo } from '../../src/media/importMedia';
 import { normalizeProject } from '../../src/model/project';
 import type { Project } from '../../src/model/types';
 import { drawRegion } from '../../src/render/drawWindow';
+import { TEMPLATES } from '../../src/templates/catalog';
+import { fontsReady } from '../../src/ui/fonts';
+import { planPages } from '../../src/model/plan';
+import { unfilledSlots } from '../../src/model/project';
 
 async function fetchBlob(url: string): Promise<Blob> {
   const r = await fetch(url);
@@ -235,4 +239,28 @@ async function runSeams(pages: number) {
   return { pieces: pieces.length, names: pieces.map((p) => p.name), badColumns, checked, rotatedCornerMaxDiff: maxDiff, rotatedCornerStrongDiffs: strongDiffs, rotatedCornerPixelsOnPage2: magenta };
 }
 
-Object.assign(window, { runVejer, runSeams, harnessReady: true });
+/** Build every template, check it, and render its strip at a small scale. */
+async function runTemplates(scale = 0.25) {
+  await fontsReady();
+  const out = [];
+  for (const t of TEMPLATES) {
+    const { project, blobs } = await t.build();
+    const bitmaps = await bitmapsFor(blobs);
+    const { pageWidth: W, pageHeight: H } = project.canvas;
+    const N = project.pages.length;
+    const c = new OffscreenCanvas(Math.round(N * W * scale), Math.round(H * scale));
+    drawRegion(c.getContext('2d')!, project, { x: 0, y: 0, width: N * W, height: H }, 0, { image: (id) => bitmaps.get(id), video: () => null }, { scale });
+    const blob = await c.convertToBlob({ type: 'image/png' });
+    const dataUrl = await new Promise<string>((res) => {
+      const fr = new FileReader();
+      fr.onload = () => res(String(fr.result));
+      fr.readAsDataURL(blob);
+    });
+    const outside = project.layers.filter((l) => l.x + l.width <= 0 || l.x >= N * W || l.y + l.height <= 0 || l.y >= H).map((l) => l.name);
+    const missing = project.assets.filter((a) => !blobs.has(a.id)).length;
+    out.push({ id: t.id, pages: N, slots: unfilledSlots(project).map((s) => s.slot), kinds: planPages(project).map((p) => p.kind), outside, missing, dataUrl });
+  }
+  return out;
+}
+
+Object.assign(window, { runVejer, runSeams, runTemplates, harnessReady: true });

@@ -86,12 +86,19 @@ export interface Crop {
   zoom: number;
 }
 
+/**
+ * A template slot: the layer still shows sample art and is waiting for the user's
+ * photo or clip. Filling it keeps the frame and clears the flag.
+ */
+export type SlotKind = 'image' | 'video';
+
 export interface ImageLayer extends LayerBase {
   type: 'image';
   assetId: string;
   fit: Fit;
   crop: Crop;
   radius: number;
+  slot?: SlotKind;
 }
 
 export interface VideoLayer extends LayerBase {
@@ -103,6 +110,7 @@ export interface VideoLayer extends LayerBase {
   clip: Clip;
   /** Insertion order among video layers; decides the default audio track. */
   audioOrder: number;
+  slot?: SlotKind;
 }
 
 export interface TextLayer extends LayerBase {
