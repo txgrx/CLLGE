@@ -1,0 +1,23 @@
+{
+  "name": "cllge-video",
+  "private": true,
+  "description": "Source of the CLLGE demo film (Remotion). Only the rendered MP4 ships with the app.",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render src/index.ts HowItWorks ../public/media/how-it-works.mp4 --codec h264 --crf 20 --audio-codec aac",
+    "poster": "remotion still src/index.ts HowItWorks ../public/media/how-it-works.jpg --frame 260 --jpeg-quality 88"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.540",
+    "@remotion/fonts": "4.0.540",
+    "@remotion/media": "4.0.540",
+    "react": "19.1.10",
+    "react-dom": "19.1.10",
+    "remotion": "4.0.540"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "typescript": "5.9.3"
+  }
+}
