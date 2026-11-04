@@ -1,10 +1,11 @@
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Editor } from './editor/Editor';
-import { Home } from './editor/Home';
 import { flushSave, useEditor } from './editor/store';
 import { library } from './media/library';
 import type { Project } from './model/types';
+import { EnterTransitionProvider } from './home/EnterTransition';
+import { HomePage } from './home/HomePage';
 import { PanoramaFlow } from './panorama/PanoramaFlow';
 import { fontsReady } from './ui/fonts';
 
@@ -40,16 +41,25 @@ export function App() {
     [open],
   );
 
+  // The editor keeps rendering during its exit animation, so the project is only
+  // closed once that animation has finished.
+  const closeAfterExit = useRef(false);
   const back = useCallback(async () => {
     await flushSave();
+    closeAfterExit.current = true;
+    setView('home');
+  }, []);
+  const onExitComplete = useCallback(() => {
+    if (!closeAfterExit.current) return;
+    closeAfterExit.current = false;
     close();
     library.clear();
-    setView('home');
   }, [close]);
 
   return (
     <MotionConfig reducedMotion="user">
-      <AnimatePresence mode="wait" initial={false}>
+      <EnterTransitionProvider>
+      <AnimatePresence mode="wait" initial={false} onExitComplete={onExitComplete}>
         <motion.div
           key={view}
           className="screen"
@@ -64,10 +74,11 @@ export function App() {
           ) : view === 'panorama' ? (
             <PanoramaFlow onBack={() => setView('home')} onOpen={openProject} />
           ) : (
-            <Home onOpen={openProject} onPanorama={() => setView('panorama')} />
+            <HomePage onOpen={openProject} onPanorama={() => setView('panorama')} />
           )}
         </motion.div>
       </AnimatePresence>
+      </EnterTransitionProvider>
     </MotionConfig>
   );
 }

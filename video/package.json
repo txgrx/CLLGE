@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "studio": "remotion studio",
-    "render": "remotion render src/index.ts HowItWorks ../public/media/how-it-works.mp4 --codec h264 --crf 20 --audio-codec aac",
-    "poster": "remotion still src/index.ts HowItWorks ../public/media/how-it-works.jpg --frame 260 --jpeg-quality 88"
+    "render": "remotion render src/index.ts HowItWorks ../docs/media/how-it-works.mp4 --codec h264 --crf 20 --audio-codec aac",
+    "poster": "remotion still src/index.ts HowItWorks ../docs/media/how-it-works.jpg --frame 260 --jpeg-quality 88"
   },
   "dependencies": {
     "@remotion/cli": "4.0.540",

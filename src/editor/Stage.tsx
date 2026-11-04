@@ -320,7 +320,7 @@ export function Stage({ onDropFiles, onSlot, cropMode, setCropMode }: Props) {
             <rect x={0} y={0} width={worldW} height={H} className="ov-page" />
             {project.pages.map((pg, i) => (
               <g key={pg.id}>
-                {i > 0 && <line x1={i * W} x2={i * W} y1={-16 / zoom} y2={H + 16 / zoom} className="ov-seam" />}
+                {i > 0 && <line x1={i * W} x2={i * W} y1={-16 / zoom} y2={H + 16 / zoom} className="ov-seam" pathLength={1} style={{ animationDelay: `${0.25 + i * 0.08}s` }} />}
                 <text x={i * W + W / 2} y={-16 / zoom} className="ov-label" style={{ fontSize: 11 / zoom }}>
                   {String(i + 1).padStart(2, '0')}
                 </text>
@@ -339,7 +339,8 @@ export function Stage({ onDropFiles, onSlot, cropMode, setCropMode }: Props) {
               <button
                 key={l.id}
                 className={`slot-pill ${l.width * zoom < 120 ? 'slot-pill--compact' : ''}`}
-                style={{ left: PAD + (l.x + l.width / 2) * zoom, top: PAD + (l.y + l.height / 2) * zoom }}
+                // Wide background slots put their pill near the top-left so it never sits on top of a smaller slot's pill.
+                style={l.width > W * 1.5 ? { left: PAD + (l.x + 90 / zoom / 2 + 40) * zoom, top: PAD + (l.y + 40) * zoom + 20 } : { left: PAD + (l.x + l.width / 2) * zoom, top: PAD + (l.y + l.height / 2) * zoom }}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={() => onSlot(l.id)}
                 data-testid={`slot-${l.id}`}
