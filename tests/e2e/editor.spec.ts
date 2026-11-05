@@ -44,7 +44,9 @@ test('blank canvas → import photo + clip → autosave → reload → export mi
 
 test('editing: add text, move with keys, undo and redo', async ({ page }) => {
   await blankCanvas(page);
-  await page.getByRole('navigation', { name: 'Tools' }).getByRole('button', { name: 'Text', exact: true }).click();
+  await page.getByTestId('tool-text').click();
+  await page.getByRole('button', { name: 'Plain text' }).click();
+  await page.getByTestId('tab-arrange').click();
   const x = page.getByRole('spinbutton', { name: 'X', exact: true });
   const before = Number(await x.inputValue());
   await page.getByRole('region', { name: 'Layers' }).locator('.layer__name').first().click();
@@ -83,4 +85,101 @@ test('template "Doorway": fill the clip slot → two MP4 slides across the seam'
   await expect(page.getByTestId('plan-03')).toContainText('03.jpg');
   await expect(page.getByText('1 slot still shows sample art')).toBeVisible();
   await exportAll(page, 3);
+});
+
+const art = (names: string[]) => names.map((n) => path.resolve(process.cwd(), 'public', 'art', `${n}.webp`));
+const slideCount = (page: Page) => page.locator('.filmstrip .film:not(.film--add)').count();
+
+test('auto collage: lays out eight photos, another idea, apply, undo', async ({ page }) => {
+  await blankCanvas(page);
+  await page.getByTestId('file-input').setInputFiles(art(['polaroid-1', 'world-1', 'print-1', 'issue-tall', 'postcard-a', 'print-2', 'issue-detail', 'bench']));
+  await expect(page.getByRole('region', { name: 'Layers' }).getByText('bench.webp')).toBeVisible();
+  const before = await slideCount(page);
+  await page.getByTestId('tool-auto').click();
+  const dialog = page.getByTestId('auto-collage');
+  await expect(dialog.getByRole('img', { name: 'Slide 1' })).toBeVisible();
+  await expect(dialog.getByText('Cover')).toBeVisible();
+  // The wide bench photo gets a panorama over several slides.
+  await expect(dialog.getByText('Panorama')).toBeVisible();
+  await page.getByTestId('auto-style-film').click();
+  await page.getByTestId('auto-another').click();
+  await page.getByTestId('auto-apply').click();
+  await expect(dialog).toHaveCount(0);
+  await expect.poll(() => slideCount(page)).toBeGreaterThan(before);
+  await expect(page.getByRole('region', { name: 'Layers' }).locator('.badge--sticker, .badge--text').first()).toBeVisible();
+  await page.keyboard.press('Control+z');
+  await expect.poll(() => slideCount(page)).toBe(before);
+});
+
+test('stickers, text styles, frames and masks from the panels', async ({ page }) => {
+  await blankCanvas(page);
+  await page.getByTestId('file-input').setInputFiles(art(['print-1']));
+  await page.getByTestId('tab-frame').click();
+  await page.getByTestId('frame-polaroid').click();
+  await expect(page.getByTestId('frame-polaroid')).toHaveAttribute('aria-checked', 'true');
+  await page.getByTestId('tab-mask').click();
+  await page.getByTestId('mask-arch').click();
+  await expect(page.getByTestId('mask-arch')).toHaveAttribute('aria-checked', 'true');
+  await page.getByTestId('tool-stickers').click();
+  await page.getByTestId('sticker-date-stamp').click();
+  await expect(page.getByRole('region', { name: 'Layers' }).getByText('date stamp')).toBeVisible();
+  await page.getByTestId('tool-text').click();
+  await page.getByTestId('preset-dymo').click();
+  await expect(page.getByTestId('text-content')).toHaveValue('LABEL');
+  await page.getByTestId('tab-font').click();
+  await page.getByTestId('font-picker').getByRole('radio', { name: 'Gloock' }).click();
+  await expect(page.getByTestId('font-picker').getByRole('radio', { name: 'Gloock' })).toHaveAttribute('aria-checked', 'true');
+  await page.getByTestId('open-export').click();
+  await exportAll(page, 3);
+});
+
+test('seam guard: words cut by a seam → warning → nudge clears it; bridges cross on purpose', async ({ page }) => {
+  await blankCanvas(page);
+  await page.getByTestId('tool-text').click();
+  await page.getByTestId('preset-masthead').click();
+  await page.getByTestId('tab-arrange').click();
+  await page.getByRole('spinbutton', { name: 'X', exact: true }).fill('620');
+  await expect(page.getByTestId('seam-warning')).toContainText('cut in two');
+  await page.getByTestId('nudge').click();
+  await expect(page.getByTestId('seam-warning')).toHaveCount(0);
+  // A bridge from the seam chip is meant to cross: no warning.
+  await page.getByTestId('seam-chip-2').click();
+  await page.getByTestId('bridge-text').click();
+  await page.waitForTimeout(600);
+  await expect(page.getByTestId('seam-warning')).toHaveCount(0);
+  await page.getByTestId('tool-draw').click();
+  await page.getByTestId('continuous-line').click();
+  // "Another one" redraws the generated line; Escape leaves draw mode.
+  await page.getByRole('button', { name: 'Another one' }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('region', { name: 'Layers' }).getByText('Continuous line')).toBeVisible();
+});
+
+test.describe('phone', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 3 });
+
+  test('dock, sheets, stickers and swiping between slides', async ({ page }) => {
+    await blankCanvas(page);
+    await expect(page.getByTestId('dock-add')).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Tools' })).toHaveCount(0);
+    await page.getByTestId('dock-add').tap();
+    await expect(page.getByTestId('bottom-sheet')).toBeVisible();
+    await page.getByTestId('add-stickers').tap();
+    await page.getByTestId('sticker-heart').tap();
+    // Adding hands over to the Edit sheet for the new sticker.
+    await expect(page.getByTestId('bottom-sheet')).toContainText('Edit');
+    await expect(page.getByTestId('tab-style')).toBeVisible();
+    await page.getByTestId('bottom-sheet').getByRole('button', { name: 'Close panel' }).tap();
+    await expect(page.getByTestId('bottom-sheet')).toHaveCount(0);
+    // One slide fills the screen; a swipe on empty canvas snaps to the next slide.
+    await expect(page.getByTestId('live-phone-chip')).toContainText('01/03');
+    const stage = await page.getByTestId('stage').boundingBox();
+    await page.touchscreen.tap(stage!.x + 20, stage!.y + stage!.height - 30);
+    const sc = page.locator('.stage__scroller');
+    await sc.evaluate((el) => el.scrollBy({ left: el.clientWidth * 0.7 }));
+    await sc.dispatchEvent('scroll');
+    await expect(page.getByTestId('live-phone-chip')).toContainText('02/03');
+    await page.getByTestId('dock-slides').tap();
+    await expect(page.getByTestId('bottom-sheet')).toContainText('3 slides');
+  });
 });

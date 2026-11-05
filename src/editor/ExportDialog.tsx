@@ -6,7 +6,7 @@ import { library } from '../media/library';
 import { planPages, summarizePlan } from '../model/plan';
 import { unfilledSlots } from '../model/project';
 import { Seg } from '../ui/controls';
-import { fontsReady } from '../ui/fonts';
+import { ensureFonts } from '../ui/fonts';
 import { Icon } from '../ui/Icon';
 import { blurSwap, spring } from '../ui/motion';
 import { useEditor } from './store';
@@ -55,7 +55,7 @@ export function ExportDialog({ onClose }: { onClose(): void }) {
     setError(null);
     setZip(null);
     try {
-      await Promise.all([library.ready(), fontsReady()]);
+      await Promise.all([library.ready(), ensureFonts(useEditor.getState().project!.layers)]);
       const result = await exportCarousel({
         project,
         blobs: (id) => library.blob(id),

@@ -1,5 +1,32 @@
 import type { CanvasSpec, Crop, Fit, Layer } from './types';
 
+const FRAME_K: Record<string, number> = { polaroid: 0.34, film: 0.2, stamp: 0.1, tape: 0.16, shadow: 0.12 };
+
+/**
+ * How far a layer paints outside its box (frames, shadows, stroke width, text
+ * effects), so culling never drops pixels that cross into a neighbouring page.
+ */
+export function paintMargin(layer: Layer): number {
+  const m = Math.min(layer.width, layer.height);
+  switch (layer.type) {
+    case 'image':
+    case 'video':
+      return layer.frame ? m * (FRAME_K[layer.frame.kind] ?? 0.2) : 0;
+    case 'stroke':
+      return layer.lineWidth;
+    case 'sticker':
+      return m * 0.08;
+    case 'text': {
+      const fx = (layer.stroke?.width ?? 0) + (layer.shadow ? layer.shadow.blur + Math.max(Math.abs(layer.shadow.dx), Math.abs(layer.shadow.dy)) : 0);
+      const hl = layer.highlight ? layer.fontSize * (0.3 + layer.highlight.pad) : 0;
+      const arc = layer.curve ? layer.fontSize * 2 : 0;
+      return fx + hl + arc + (layer.ransom ? layer.fontSize * 0.3 : 0);
+    }
+    default:
+      return 0;
+  }
+}
+
 export interface Rect {
   x: number;
   y: number;

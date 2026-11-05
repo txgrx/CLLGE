@@ -9,6 +9,7 @@ import { coast } from '../templates/art';
 import { sampleBlob } from '../templates/samples';
 import { PhoneCarousel, Seg, Stepper, Switch } from '../ui/controls';
 import { fontsReady } from '../ui/fonts';
+import { AutoCollage } from '../editor/AutoCollage';
 import { Icon } from '../ui/Icon';
 import { blurSwap, spring } from '../ui/motion';
 import { MAX_SLIDES, MIN_SLIDES, buildPanoramaProject, sliceInfo, suggestSlides } from './split';
@@ -36,6 +37,7 @@ export function PanoramaFlow({ onBack, onOpen }: Props) {
   const [src, setSrc] = useState<Source | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [over, setOver] = useState(false);
+  const [auto, setAuto] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
   const load = async (file: Blob & { name?: string }) => {
@@ -103,6 +105,9 @@ export function PanoramaFlow({ onBack, onOpen }: Props) {
                       Use a sample
                     </button>
                   </div>
+                  <button className="link" onClick={() => setAuto(true)} data-testid="pano-auto">
+                    Several photos instead? Let Auto collage lay them out →
+                  </button>
                   {error && (
                     <p className="notice notice--error" role="alert">
                       {error}
@@ -130,6 +135,9 @@ export function PanoramaFlow({ onBack, onOpen }: Props) {
           )}
         </AnimatePresence>
       </div>
+      <AnimatePresence>
+        {auto && <AutoCollage media={[]} title="Auto collage" onClose={() => setAuto(false)} applyLabel="Open in the editor" onApply={(project, blobs) => onOpen(project, blobs, null)} />}
+      </AnimatePresence>
     </div>
   );
 }
@@ -258,7 +266,7 @@ function Compose({ src, onReset, onOpen }: { src: Source; onReset(): void; onOpe
           </AnimatePresence>
         </div>
 
-        <div className="row" style={{ justifyContent: 'space-between' }}>
+        <div className="row pano__actions" style={{ justifyContent: 'space-between' }}>
           <button className="btn btn--ghost btn--sm" onClick={onReset}>
             Other photo
           </button>

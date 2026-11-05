@@ -10,7 +10,10 @@ import { normalizeProject } from '../../src/model/project';
 import type { Project } from '../../src/model/types';
 import { drawRegion } from '../../src/render/drawWindow';
 import { TEMPLATES } from '../../src/templates/catalog';
-import { fontsReady } from '../../src/ui/fonts';
+import { ensureFonts, fontsReady } from '../../src/ui/fonts';
+import { continuousLine } from '../../src/render/shapes';
+import { strokeLayer } from '../../src/model/project';
+import { RANSOM_FONTS } from '../../src/editor/textPresets';
 import { planPages } from '../../src/model/plan';
 import { unfilledSlots } from '../../src/model/project';
 
@@ -239,6 +242,81 @@ async function runSeams(pages: number) {
   return { pieces: pieces.length, names: pieces.map((p) => p.name), badColumns, checked, rotatedCornerMaxDiff: maxDiff, rotatedCornerStrongDiffs: strongDiffs, rotatedCornerPixelsOnPage2: magenta };
 }
 
+/**
+ * v0.6 decorations across seams: a framed + masked photo, stickers, a pen line over
+ * two seams and effect text. Each exported page must equal the same window of the
+ * strip drawn in one go (so nothing is cut, doubled or shifted at a seam).
+ */
+async function runDecor() {
+  const W = 1080;
+  const H = 1350;
+  const N = 3;
+  const src = new OffscreenCanvas(1600, 1200);
+  const g = src.getContext('2d')!;
+  const grad = g.createLinearGradient(0, 0, 1600, 1200);
+  grad.addColorStop(0, '#1d3b8a');
+  grad.addColorStop(1, '#f2c14e');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 1600, 1200);
+  const blob = await src.convertToBlob({ type: 'image/png' });
+  const bmp = await createImageBitmap(blob);
+  const line = strokeLayer(continuousLine(N * W, H, 5), '#ff3b2f', 18, 'marker', 'Line');
+  const project: Project = normalizeProject({
+    schemaVersion: 1,
+    id: 'decor',
+    revision: 1,
+    title: 'Decor',
+    canvas: { pageWidth: W, pageHeight: H, background: '#F2EEE6' },
+    pages: Array.from({ length: N }, (_, i) => ({ id: `p${i}` })),
+    assets: [{ id: 'photo', type: 'image', name: 'photo.png', mime: 'image/png', width: 1600, height: 1200 }],
+    layers: [
+      { id: 'ph', type: 'image', assetId: 'photo', x: 700, y: 260, width: 760, height: 570, rotation: -4, fit: 'cover', mask: 'torn', seed: 9, frame: { kind: 'polaroid', caption: 'across' } },
+      { id: 'film', type: 'image', assetId: 'photo', x: 1900, y: 820, width: 520, height: 360, fit: 'cover', frame: { kind: 'film' } },
+      { id: 'st', type: 'sticker', sticker: 'star', color: '#ff3b2f', x: 1000, y: 900, width: 180, height: 180, rotation: 12, weight: 1, seed: 3 },
+      { id: 'tape', type: 'sticker', sticker: 'tape', color: 'rgba(236,226,196,0.82)', x: 2060, y: 180, width: 320, height: 100, rotation: -8, weight: 1, seed: 4 },
+      { id: 'tag', type: 'sticker', sticker: 'date-stamp', color: '#e2462c', x: 400, y: 1100, width: 300, height: 136, weight: 1, seed: 2 },
+      line,
+      { id: 'neon', type: 'text', text: 'OPEN LATE', x: 140, y: 120, width: 800, height: 160, fontFamily: '"Monoton", sans-serif', fontSize: 110, fontWeight: 400, color: '#FFE1F0', align: 'center', lineHeight: 1.1, shadow: { color: '#FF3B8F', blur: 30, dx: 0, dy: 0 }, stroke: { color: '#FF3B8F', width: 3 } },
+      { id: 'ransom', type: 'text', text: 'keep going', x: 1760, y: 560, width: 700, height: 160, fontFamily: '"Bodoni Moda", serif', fontSize: 120, fontWeight: 400, color: '#141414', align: 'center', lineHeight: 1.4, letterSpacing: 0.06, ransom: { fonts: RANSOM_FONTS, seed: 7 }, bridge: true },
+      { id: 'dymo', type: 'text', text: 'SLIDE 03', x: 2400, y: 1150, width: 500, height: 120, fontFamily: '"Space Mono", monospace', fontSize: 60, fontWeight: 700, color: '#F4F1EA', align: 'center', lineHeight: 1.7, uppercase: true, letterSpacing: 0.12, highlight: { color: '#E2462C', style: 'dymo', pad: 0.4 } },
+      { id: 'arc', type: 'text', text: 'around the bend', x: 2300, y: 380, width: 800, height: 160, fontFamily: '"Fraunces", serif', fontSize: 80, fontWeight: 400, italic: true, color: '#141414', align: 'center', lineHeight: 1.1, curve: 0.5 },
+    ],
+  });
+  await ensureFonts(project.layers);
+  const caps = await probeCapabilities(W, H);
+  const pieces = await exportCarousel({ project, blobs: () => blob, images: () => bmp, caps, stillFormat: 'png' });
+  const strip = new OffscreenCanvas(W * N, H);
+  drawRegion(strip.getContext('2d')!, project, { x: 0, y: 0, width: W * N, height: H }, 0, { image: () => bmp, video: () => null });
+  const all = strip.getContext('2d')!.getImageData(0, 0, W * N, H).data;
+  const perPage: { strong: number; max: number; ink: number; cols: number[] }[] = [];
+  for (let i = 0; i < pieces.length; i++) {
+    const pb = await createImageBitmap(pieces[i].blob);
+    const c = new OffscreenCanvas(W, H);
+    const ctx = c.getContext('2d')!;
+    ctx.drawImage(pb, 0, 0);
+    const d = ctx.getImageData(0, 0, W, H).data;
+    let strong = 0;
+    let max = 0;
+    let ink = 0;
+    const cols = new Set<number>();
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++) {
+        const a = (y * W + x) * 4;
+        const b = (y * W * N + i * W + x) * 4;
+        const diff = Math.max(Math.abs(d[a] - all[b]), Math.abs(d[a + 1] - all[b + 1]), Math.abs(d[a + 2] - all[b + 2]));
+        if (diff > max) max = diff;
+        if (diff > 32) {
+          strong++;
+          cols.add(x);
+        }
+        // Red pen ink at the page's two edge columns: the line runs on across the seam.
+        if ((x === 0 || x === W - 1) && d[a] > 200 && d[a + 1] < 110 && d[a + 2] < 110) ink++;
+      }
+    perPage.push({ strong, max, ink, cols: [...cols].slice(0, 8) });
+  }
+  return { names: pieces.map((p) => p.name), perPage };
+}
+
 /** Build every template, check it, and render its strip at a small scale. */
 async function runTemplates(scale = 0.25) {
   await fontsReady();
@@ -265,4 +343,4 @@ async function runTemplates(scale = 0.25) {
 
 import { filmAssets } from './filmAssets';
 
-Object.assign(window, { runVejer, runSeams, runTemplates, filmAssets, harnessReady: true });
+Object.assign(window, { runVejer, runSeams, runDecor, runTemplates, filmAssets, harnessReady: true });

@@ -8,10 +8,42 @@ Design one long horizontal canvas, drop in a panorama, a clip and some text, and
 carousel pages that line up exactly when people swipe. Pages with a moving clip become MP4 files (with
 sound); the rest become photos. No account, no watermark, no upload, up to 20 pages.
 
-> Status: early (v0.5). Tested in desktop Chromium; real iPhone/Android checks are still pending —
+> Status: early (v0.6). Tested in desktop Chromium; real iPhone/Android checks are still pending —
 > please report what works on your phone.
 
-### New in v0.5 — cyanotypes
+### New in v0.6 — making it is the fun part
+
+- **Auto collage.** Pick 3–30 photos or clips and CLLGE lays out the whole carousel in your order: a cover,
+  spreads, a photo *across a seam* (cut at a third, so a centred subject stays whole), a panorama for very
+  wide shots, a closing slide. Four styles (Editorial, Clean grid, Film roll, Scrapbook), **Another idea**
+  for a new layout, and a lock on any slide you want to keep. Everything it makes stays editable; Undo
+  brings your previous layout back. From the home page, the editor or the panorama flow.
+- **Bridges between slides.** Tap the chip on any seam: tape over the cut, a photo across it, words that
+  continue on the next slide, an arrow, a "swipe →" tag, or one **continuous pen line through every slide**.
+  Or pick **Draw** and draw your own lines across the seams (marker, pencil, dashed, scribble).
+- **Live phone + seam guard.** A small phone shows the slide in view exactly as it will post while you edit
+  (swipe it to move around). CLLGE warns you when a cut falls on what matters: a point you marked on a photo
+  (double-tap it in crop mode, or **Find a face** where the browser can do it on device), words split in two
+  by a seam, or a sliver of a photo on the next slide. **Nudge** moves the layer just clear of the seam.
+- **Stickers & doodles** drawn by code (sharp at any size): loop and swoosh arrows, a marker circle,
+  underline, star, sparkle, heart, asterisk, squiggle, X, bracket, a "NEW" burst, a ticket, a date stamp,
+  a swipe tag and tape. They take colours from a palette sampled from your own photos.
+- **Frames & masks** for photos and clips: instant-photo with a handwritten caption, 35 mm film with
+  sprockets, a perforated stamp, taped corners, a print shadow; masks in circle, arch, blob, torn paper,
+  perforated edge and ticket shapes.
+- **Text effects and 21 fonts** in four families: editorial serifs (Fraunces, Bodoni Moda, Gloock, Young
+  Serif, Italiana, Instrument Serif), bold display (Bricolage Grotesque, Syne, Unbounded, Climate Crisis,
+  Rubik Mono One, Schibsted Grotesk), handwritten (Permanent Marker, Reenie Beanie, Homemade Apple, Caveat)
+  and typewriter & retro (Special Elite, Space Mono, Major Mono Display, Monoton, JetBrains Mono).
+  One-tap styles: Masthead, Marker note, Dymo label, Typewriter, Neon, Rubber stamp, Outline, Curved,
+  **Ransom** (each letter cut from a different font) and Across the seam. Plus letter spacing, curve,
+  stroke, glow, marker/box/label highlights.
+- **A phone editor.** Under 760 px the editor becomes one slide at a time with swipe-to-snap between slides,
+  a bottom dock (Add · Edit · Slides · Preview) and a sheet you drag between three heights. Pinch and
+  rotate a selected layer with two fingers, and long-press a layer for its menu. The home page and the
+  panorama flow were also adjusted for 375–430 px screens.
+
+### v0.5 — cyanotypes
 
 - **A cyanotype world.** The home page and the templates now use a series of cyanotype prints (Prussian
   blue on cotton paper, one hand-painted red accent each), generated with GPT Image 2 from
@@ -59,7 +91,9 @@ sound); the rest become photos. No account, no watermark, no upload, up to 20 pa
 | **Video & audio rules** | Trim (in/out), start time, volume, "hold last frame". Page length = the longest clip on it. Clips are sampled by timestamp, so phone clips with variable frame rate stay in sync. One audio track per page (auto, silent or a chosen clip). |
 | **Honest compatibility** | Before you build a montage, the app tells you whether this browser can decode your clip, encode H.264 and encode AAC. If it can't, it says so and offers a choice (silent videos, photos only) instead of silently dropping motion. |
 | **Templates & slots** | Slots keep their frame (position, rotation, corners) when you drop your own photo or clip in; a photo slot accepts a clip and becomes video. Export warns if sample art is left. |
-| **Editing** | Move, resize, rotate, snap to seams/centres, layers (order, lock, hide), photo crop inside its frame (double-click), text, shapes, undo/redo, keyboard nudges (1 px / Shift 10 px). |
+| **Editing** | Move, resize, rotate, snap to seams/centres, layers (order, lock, hide), photo crop inside its frame (double-click), text with effects, stickers, pen lines, frames and masks, undo/redo, keyboard nudges (1 px / Shift 10 px). |
+| **Auto collage** | A deterministic layout engine (`src/autolayout/compose.ts`) scores page recipes by how well each photo's shape fits its slot, keeps your order and the rhythm (no two identical spreads in a row), and respects locked slides. |
+| **Seam guard** | `src/model/seams.ts` checks points of interest, text lines and slivers against every seam and computes the smallest nudge that clears them. |
 | **Preview** | Swipe preview with per-page clocks like the feed, and a "seams at 100 %" view showing two neighbouring pages at the same instant. |
 | **Saving** | Autosave to the browser's IndexedDB (media first, then the revision); detects edits from another tab instead of overwriting. |
 | **Delivery** | Share sheet on phones (when the browser supports sharing files), per-file download, or ZIP — plus the steps to post them in order. |
@@ -125,6 +159,16 @@ CLLGE es un editor gratuito y de código abierto para crear carruseles continuos
 Todo se procesa en tu dispositivo: sin cuenta, sin marca de agua y sin subir tus archivos. Exporta
 cada página como foto o como MP4 con sonido, en el orden correcto para Instagram. La interfaz está en
 inglés.
+
+Desde la v0.6 incluye:
+
+- **Auto-collage:** maqueta todo el carrusel a partir de tus fotos, en cuatro estilos, y puedes bloquear las
+  diapositivas que te gusten.
+- **Puentes entre diapositivas:** cinta, foto, texto, flecha o una línea continua que cruzan la costura.
+- **Móvil en vivo y aviso de costura:** ves cada diapositiva tal como se publicará, y la app te avisa (y lo
+  corrige con «Nudge») cuando un corte cae sobre algo importante.
+- **Pegatinas, garabatos, marcos, máscaras, efectos de texto y 21 fuentes.**
+- **Editor rediseñado para el móvil.**
 
 ## License
 

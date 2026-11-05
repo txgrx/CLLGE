@@ -9,6 +9,8 @@ import {
   type MediaLayer,
   type Project,
   type ShapeLayer,
+  type StickerLayer,
+  type StrokeLayer,
   type TextLayer,
   type VideoLayer,
 } from './types';
@@ -52,6 +54,18 @@ export function normalizeProject(input: unknown): Project {
       m.fit = m.fit ?? 'cover';
       m.crop = { ...CROP_DEFAULT, ...(m.crop ?? {}) };
       m.radius = m.radius ?? 0;
+    }
+    if (base.type === 'sticker') {
+      const st = base as StickerLayer;
+      st.weight = st.weight ?? 1;
+      st.seed = st.seed ?? 1;
+      st.color = st.color ?? '#FF3B2F';
+    }
+    if (base.type === 'stroke') {
+      const sk = base as StrokeLayer;
+      sk.points = Array.isArray(sk.points) ? sk.points : [];
+      sk.lineWidth = sk.lineWidth ?? 12;
+      sk.style = sk.style ?? 'marker';
     }
     if (base.type === 'video') {
       const v = base as VideoLayer;
@@ -259,6 +273,51 @@ export function fillSlot(p: Project, layerId: string, asset: Asset): Project {
   }
   const withAsset = addAsset(p, asset);
   return removeLayers({ ...withAsset, layers: withAsset.layers.map((l) => (l.id === layerId ? next : l)) }, []);
+}
+
+/** A sticker from the library, centred on (cx, cy) with the given box height. */
+export function stickerLayer(id: string, aspect: number, color: string, cx: number, cy: number, h: number, label?: string): StickerLayer {
+  const w = h * aspect;
+  return {
+    ...LAYER_DEFAULTS,
+    id: newId('l_'),
+    type: 'sticker',
+    name: id.replace(/-/g, ' '),
+    sticker: id,
+    color,
+    weight: 1,
+    seed: Math.floor(Math.random() * 1e6),
+    label,
+    x: Math.round(cx - w / 2),
+    y: Math.round(cy - h / 2),
+    width: Math.round(w),
+    height: Math.round(h),
+  };
+}
+
+/** A stroke layer from world-space points: the box is their bounds (plus the line width). */
+export function strokeLayer(world: [number, number][], color: string, lineWidth: number, style: StrokeLayer['style'], name = 'Line'): StrokeLayer {
+  const xs = world.map((p) => p[0]);
+  const ys = world.map((p) => p[1]);
+  const pad = lineWidth;
+  const x0 = Math.min(...xs) - pad;
+  const y0 = Math.min(...ys) - pad;
+  const x1 = Math.max(...xs) + pad;
+  const y1 = Math.max(...ys) + pad;
+  return {
+    ...LAYER_DEFAULTS,
+    id: newId('l_'),
+    type: 'stroke',
+    name,
+    x: x0,
+    y: y0,
+    width: Math.max(1, x1 - x0),
+    height: Math.max(1, y1 - y0),
+    points: world.map(([x, y]) => [(x - x0) / Math.max(1, x1 - x0), (y - y0) / Math.max(1, y1 - y0)]),
+    color,
+    lineWidth,
+    style,
+  };
 }
 
 /** Exact media rectangle for a media layer, re-exported for the inspector. */
