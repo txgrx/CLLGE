@@ -110,6 +110,8 @@ export function Editor({ onBack, exportOnOpen = false }: { onBack(): void; expor
     return pageIndexAt(project.canvas, center, project.pages.length);
   };
   const currentPage = useUi((s) => s.page);
+  // The slide in view follows scrolling. When the whole strip fits (nothing to scroll),
+  // a slide picked in the filmstrip or the live phone stays picked.
   useEffect(() => {
     const sc = scroller();
     if (!sc) return;
@@ -117,10 +119,15 @@ export function Editor({ onBack, exportOnOpen = false }: { onBack(): void; expor
       const i = visiblePage();
       if (i !== useUi.getState().page) setUi({ page: i });
     };
-    on();
     sc.addEventListener('scroll', on, { passive: true });
     return () => sc.removeEventListener('scroll', on);
   });
+  useEffect(() => {
+    const sc = scroller();
+    const fits = sc ? sc.scrollWidth <= sc.clientWidth + 1 : false;
+    if (!fits || useUi.getState().page >= project.pages.length) setUi({ page: Math.min(visiblePage(), project.pages.length - 1) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zoom, project.pages.length]);
 
   const goToPage = (i: number) => {
     const sc = scroller();
@@ -190,7 +197,7 @@ export function Editor({ onBack, exportOnOpen = false }: { onBack(): void; expor
         .map((l) => l.id)
         .filter((id) => id !== firstSlot);
       const targets = firstSlot ? [firstSlot, ...order] : order;
-      if (!targets.length && ok.length) return importAndPlace(files, visiblePage());
+      if (!targets.length && ok.length) return importAndPlace(files, useUi.getState().page);
       let filled = 0;
       apply((p) => {
         let next = p;
@@ -323,7 +330,7 @@ export function Editor({ onBack, exportOnOpen = false }: { onBack(): void; expor
   const openTray = (t: Tray | null) => setUi({ tray: t, tool: t === 'draw' ? 'draw' : 'select' });
 
   const pickMedia = () => {
-    insertPage.current = visiblePage();
+    insertPage.current = useUi.getState().page;
     fileInput.current?.click();
   };
 
@@ -575,7 +582,7 @@ export function Editor({ onBack, exportOnOpen = false }: { onBack(): void; expor
       <input
         ref={fileInput}
         type="file"
-        accept="image/*,video/*"
+        accept="image/*,video/*,.mov,video/quicktime"
         multiple
         hidden
         data-testid="file-input"
@@ -588,7 +595,7 @@ export function Editor({ onBack, exportOnOpen = false }: { onBack(): void; expor
       <input
         ref={slotInput}
         type="file"
-        accept="image/*,video/*"
+        accept="image/*,video/*,.mov,video/quicktime"
         hidden
         data-testid="slot-input"
         onChange={(e) => {
@@ -602,7 +609,7 @@ export function Editor({ onBack, exportOnOpen = false }: { onBack(): void; expor
       <input
         ref={fillInput}
         type="file"
-        accept="image/*,video/*"
+        accept="image/*,video/*,.mov,video/quicktime"
         multiple
         hidden
         data-testid="fill-input"
@@ -615,7 +622,7 @@ export function Editor({ onBack, exportOnOpen = false }: { onBack(): void; expor
       <input
         ref={straddleInput}
         type="file"
-        accept="image/*,video/*"
+        accept="image/*,video/*,.mov,video/quicktime"
         hidden
         data-testid="straddle-input"
         onChange={(e) => {
@@ -636,7 +643,7 @@ export function Editor({ onBack, exportOnOpen = false }: { onBack(): void; expor
       </div>
 
       <AnimatePresence>
-        {panel === 'preview' && <Preview key="preview" onClose={() => setPanel('none')} startPage={visiblePage()} />}
+        {panel === 'preview' && <Preview key="preview" onClose={() => setPanel('none')} startPage={currentPage} />}
         {panel === 'export' && <ExportDialog key="export" onClose={() => setPanel('none')} />}
         {panel === 'auto' && (
           <AutoCollage

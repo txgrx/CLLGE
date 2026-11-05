@@ -117,7 +117,7 @@ export function AutoCollage({ media, title, size, applyLabel = 'Use this layout'
           <input
             ref={input}
             type="file"
-            accept="image/*,video/*"
+            accept="image/*,video/*,.mov,video/quicktime"
             multiple
             hidden
             data-testid="auto-input"

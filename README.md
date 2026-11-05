@@ -8,8 +8,15 @@ Design one long horizontal canvas, drop in a panorama, a clip and some text, and
 carousel pages that line up exactly when people swipe. Pages with a moving clip become MP4 files (with
 sound); the rest become photos. No account, no watermark, no upload, up to 20 pages.
 
-> Status: early (v0.6). Tested in desktop Chromium; real iPhone/Android checks are still pending —
+> Status: early (v0.6.1). Tested in desktop Chromium; real iPhone/Android checks are still pending —
 > please report what works on your phone.
+
+### v0.6.1
+
+- **iPhone clips (.MOV) now show up.** Safari on iOS loads no frames for a video that is not playing, so
+  clips appeared as grey boxes. Frames are now decoded on the device with WebCodecs whenever the browser
+  has none to show (editor, live phone, filmstrip, Auto collage, Preview), and the Preview plays muted
+  until you tap the sound button, as iOS requires.
 
 ### New in v0.6 — making it is the fun part
 

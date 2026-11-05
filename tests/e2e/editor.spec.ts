@@ -183,3 +183,59 @@ test.describe('phone', () => {
     await expect(page.getByTestId('bottom-sheet')).toContainText('3 slides');
   });
 });
+
+test('iPhone .MOV (rotated): shows its frames even when the browser never loads the <video>', async ({ page }) => {
+  // iOS Safari does not load frames for a <video> that is not playing: emulate that.
+  await page.addInitScript(() => {
+    Object.defineProperty(HTMLMediaElement.prototype, 'readyState', { get: () => 0 });
+  });
+  await blankCanvas(page);
+  await page.getByTestId('file-input').setInputFiles(path.join(fixtures, 'plaza.mov'));
+  await expect(page.getByRole('region', { name: 'Layers' }).getByText('plaza.mov')).toBeVisible();
+  // Display rotation is applied: a portrait clip.
+  await page.getByTestId('tab-arrange').click();
+  const w = Number(await page.getByRole('spinbutton', { name: 'W', exact: true }).inputValue());
+  const h = Number(await page.getByRole('spinbutton', { name: 'H', exact: true }).inputValue());
+  expect(h).toBeGreaterThan(w);
+
+  /** Spread of colours over a grid of points inside `box` on `canvas` (the grey placeholder is flat). */
+  const spread = (selector: string, box: { x: number; y: number; width: number; height: number }) =>
+    page.evaluate(
+      ({ selector, box }) => {
+        const cv = document.querySelector(selector) as HTMLCanvasElement;
+        const r = cv.getBoundingClientRect();
+        const ctx = cv.getContext('2d')!;
+        const kx = cv.width / r.width;
+        const ky = cv.height / r.height;
+        const vals: number[] = [];
+        for (let i = 1; i < 6; i++)
+          for (let j = 1; j < 6; j++) {
+            const x = (box.x + (box.width * i) / 6 - r.left) * kx;
+            const y = (box.y + (box.height * j) / 6 - r.top) * ky;
+            const d = ctx.getImageData(Math.round(x), Math.round(y), 1, 1).data;
+            vals.push(d[0], d[1], d[2]);
+          }
+        return Math.max(...vals) - Math.min(...vals);
+      },
+      { selector, box },
+    );
+
+  const stageBox = (await page.getByTestId('stage').boundingBox())!;
+  const sel = (await page.locator('.ov-sel').first().boundingBox())!;
+  const clip = { x: sel.x, y: Math.max(sel.y, stageBox.y), width: sel.width, height: Math.min(sel.height, stageBox.height - 40) };
+  await expect.poll(() => spread('.stage__canvas', clip), { timeout: 15_000 }).toBeGreaterThan(40);
+  // The clip went onto slide 1: bring it to the live phone and the preview.
+  await page.locator('.filmstrip').getByRole('button', { name: /^Slide 1\b/ }).click();
+  await expect(page.getByTestId('live-phone-canvas')).toHaveAttribute('aria-label', /Slide 1 of 3/);
+  const phone = (await page.getByTestId('live-phone-canvas').boundingBox())!;
+  await expect.poll(() => spread('[data-testid="live-phone-canvas"]', { x: phone.x + phone.width * 0.25, y: phone.y + phone.height * 0.25, width: phone.width * 0.5, height: phone.height * 0.5 }), { timeout: 15_000 }).toBeGreaterThan(40);
+
+  await page.getByRole('button', { name: 'Preview', exact: true }).click();
+  const prev = (await page.locator('.preview__canvas').boundingBox())!;
+  await expect.poll(() => spread('.preview__canvas', { x: prev.x + prev.width * 0.25, y: prev.y + prev.height * 0.25, width: prev.width * 0.5, height: prev.height * 0.5 }), { timeout: 15_000 }).toBeGreaterThan(40);
+  await page.keyboard.press('Escape');
+
+  await page.getByTestId('open-export').click();
+  await expect(page.getByTestId('plan-01')).toContainText('01.mp4');
+  await exportAll(page, 3);
+});
