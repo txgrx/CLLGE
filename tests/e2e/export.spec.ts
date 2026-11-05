@@ -58,6 +58,20 @@ for (const pages of [3, 20]) {
   });
 }
 
+test('stickers, frames, masks, a pen line and effect text survive the seams', async ({ page }) => {
+  const r = await page.evaluate(() => (window as any).runDecor());
+  console.log(JSON.stringify(r));
+  expect(r.names).toEqual(['01.png', '02.png', '03.png']);
+  for (const p of r.perPage) {
+    // Same pixels as the strip drawn at once (only edge anti-aliasing may differ).
+    expect(p.strong).toBeLessThan(20);
+  }
+  // The pen line reaches the edges of every slide it crosses.
+  expect(r.perPage[0].ink).toBeGreaterThan(0);
+  expect(r.perPage[1].ink).toBeGreaterThan(0);
+  expect(r.perPage[2].ink).toBeGreaterThan(0);
+});
+
 test('every template builds: slots, assets present, nothing off-canvas', async ({ page }) => {
   const r = await page.evaluate(() => (window as any).runTemplates(0.1));
   expect(r).toHaveLength(8);

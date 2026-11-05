@@ -10,6 +10,7 @@ import { ActDevelop } from './ActDevelop';
 import { ActFilmRoll } from './ActFilmRoll';
 import { ActPanorama } from './ActPanorama';
 import { BlankSheet } from './BlankSheet';
+import { AutoCollage } from '../editor/AutoCollage';
 import { Cursor } from './Cursor';
 import { DryingLine } from './DryingLine';
 import { useEnter } from './EnterTransition';
@@ -35,6 +36,7 @@ export function HomePage({ onOpen, onPanorama }: Props) {
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [blank, setBlank] = useState(false);
+  const [auto, setAuto] = useState(false);
   const [opening, setOpening] = useState<string | null>(null);
 
   const refresh = () =>
@@ -80,7 +82,10 @@ export function HomePage({ onOpen, onPanorama }: Props) {
       <button className="btn btn--primary btn--lg" onClick={(e) => void enter({ kind: 'circle', ...centerOf(e.currentTarget) }, onPanorama)} data-cursor="Split">
         <Icon name="pano" /> Split a panorama
       </button>
-      <button className="btn btn--lg btn--glass" onClick={() => setBlank(true)}>
+      <button className="btn btn--lg btn--glass" onClick={() => setAuto(true)} data-testid="home-auto" data-cursor="Auto">
+        <Icon name="auto" /> Auto collage
+      </button>
+      <button className="btn btn--lg btn--ghost" onClick={() => setBlank(true)}>
         <Icon name="plus" /> Blank canvas
       </button>
     </>
@@ -128,6 +133,21 @@ export function HomePage({ onOpen, onPanorama }: Props) {
       <Footer />
 
       <AnimatePresence>
+        {auto && (
+          <AutoCollage
+            key="auto"
+            media={[]}
+            title="My carousel"
+            applyLabel="Open in the editor"
+            onClose={() => setAuto(false)}
+            onApply={(p, blobs) => {
+              void requestPersistence();
+              const btn = document.querySelector('[data-testid="auto-apply"]');
+              const c = btn ? centerOf(btn) : { x: innerWidth / 2, y: innerHeight / 2 };
+              void enter({ kind: 'circle', ...c }, () => onOpen(p, blobs, null));
+            }}
+          />
+        )}
         {blank && (
           <BlankSheet
             onClose={() => setBlank(false)}

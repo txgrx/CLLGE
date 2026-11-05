@@ -1,11 +1,11 @@
 import type { Project } from '../model/types';
 import { drawPage } from '../render/drawWindow';
-import { fontsReady } from '../ui/fonts';
+import { ensureFonts } from '../ui/fonts';
 import { TEMPLATES } from './catalog';
 
 /** Render every page of a project to small image URLs (for cards and previews). */
 export async function renderPages(project: Project, blobs: Map<string, Blob>, pageHeightPx: number): Promise<string[]> {
-  await fontsReady();
+  await ensureFonts(project.layers);
   const bitmaps = new Map<string, ImageBitmap>();
   for (const [id, b] of blobs) bitmaps.set(id, await createImageBitmap(b));
   const { pageWidth: W, pageHeight: H } = project.canvas;

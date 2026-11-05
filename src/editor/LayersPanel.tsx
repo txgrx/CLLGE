@@ -3,7 +3,7 @@ import type { Layer } from '../model/types';
 import { Icon } from '../ui/Icon';
 import { useEditor } from './store';
 
-const KIND: Record<Layer['type'], string> = { image: 'Photo', video: 'Video', text: 'Text', shape: 'Shape' };
+const KIND: Record<Layer['type'], string> = { image: 'Photo', video: 'Video', text: 'Text', shape: 'Shape', sticker: 'Sticker', stroke: 'Line' };
 
 export function LayersPanel() {
   const project = useEditor((s) => s.project)!;

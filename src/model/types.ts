@@ -92,7 +92,32 @@ export interface Crop {
  */
 export type SlotKind = 'image' | 'video';
 
-export interface ImageLayer extends LayerBase {
+/** Shape the media is cut to (rect = the layer's rounded rectangle). */
+export type MaskKind = 'rect' | 'circle' | 'arch' | 'blob' | 'torn' | 'stamp' | 'ticket';
+
+/** Decoration drawn around a photo or clip. */
+export interface MediaFrame {
+  kind: 'polaroid' | 'film' | 'stamp' | 'tape' | 'shadow';
+  color?: string;
+  /** Polaroid caption. */
+  caption?: string;
+}
+
+/** Point of interest in the media, 0..1 of its width/height (the seam guard keeps it off cuts). */
+export interface Poi {
+  x: number;
+  y: number;
+}
+
+interface MediaExtras {
+  mask?: MaskKind;
+  frame?: MediaFrame;
+  poi?: Poi;
+  /** Seed for organic masks (blob, torn). */
+  seed?: number;
+}
+
+export interface ImageLayer extends LayerBase, MediaExtras {
   type: 'image';
   assetId: string;
   fit: Fit;
@@ -101,7 +126,7 @@ export interface ImageLayer extends LayerBase {
   slot?: SlotKind;
 }
 
-export interface VideoLayer extends LayerBase {
+export interface VideoLayer extends LayerBase, MediaExtras {
   type: 'video';
   assetId: string;
   fit: Fit;
@@ -122,6 +147,23 @@ export interface TextLayer extends LayerBase {
   color: string;
   align: 'left' | 'center' | 'right';
   lineHeight: number;
+  /** Extra space between letters, in em. */
+  letterSpacing?: number;
+  italic?: boolean;
+  uppercase?: boolean;
+  /** Bend the first line into an arc: −1 (frown) … 1 (smile). */
+  curve?: number;
+  stroke?: { color: string; width: number };
+  /** Draw only the stroke (outline text). */
+  outlineOnly?: boolean;
+  shadow?: { color: string; blur: number; dx: number; dy: number };
+  highlight?: { color: string; style: 'marker' | 'box' | 'dymo'; pad: number };
+  /** Ransom-note style: each letter takes a font from this list, picked by seed. */
+  ransom?: { fonts: string[]; seed: number };
+  /** Preset this text came from (shown in the inspector). */
+  preset?: string;
+  /** Text meant to cross a seam: the seam guard leaves it alone. */
+  bridge?: boolean;
 }
 
 export interface ShapeLayer extends LayerBase {
@@ -130,7 +172,30 @@ export interface ShapeLayer extends LayerBase {
   radius: number;
 }
 
-export type Layer = ImageLayer | VideoLayer | TextLayer | ShapeLayer;
+/** A vector doodle from the built-in library (see render/shapes.ts). */
+export interface StickerLayer extends LayerBase {
+  type: 'sticker';
+  sticker: string;
+  color: string;
+  /** Line thickness relative to the sticker's size (1 = default). */
+  weight: number;
+  seed: number;
+  /** Optional text for stickers that carry one (date stamp, tag, ticket). */
+  label?: string;
+}
+
+/** A hand-drawn line. Points are fractions (0..1) of the layer's box, so resizing scales the drawing. */
+export interface StrokeLayer extends LayerBase {
+  type: 'stroke';
+  points: [number, number][];
+  color: string;
+  lineWidth: number;
+  style: 'marker' | 'pencil' | 'dashed' | 'scribble';
+  /** Points were made by the "continuous line" generator (can be regenerated). */
+  generated?: { seed: number };
+}
+
+export type Layer = ImageLayer | VideoLayer | TextLayer | ShapeLayer | StickerLayer | StrokeLayer;
 export type MediaLayer = ImageLayer | VideoLayer;
 
 export interface Project {
