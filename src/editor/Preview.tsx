@@ -22,6 +22,9 @@ export function Preview({ onClose, startPage = 0 }: { onClose(): void; startPage
   const [mode, setMode] = useState<'swipe' | 'seam'>('swipe');
   const [playing, setPlaying] = useState(true);
   const [muted, setMuted] = useState(false);
+  // iOS refuses to start sound outside a tap: then clips play muted until the sound button is pressed.
+  const [soundBlocked, setSoundBlocked] = useState(false);
+  const blocked = useRef(false);
   const canvas = useRef<HTMLCanvasElement>(null);
   const dir = useRef(1);
   const t0 = useRef(performance.now());
@@ -40,9 +43,13 @@ export function Preview({ onClose, startPage = 0 }: { onClose(): void; startPage
       const blob = library.blob(l.assetId);
       if (!blob) continue;
       const v = document.createElement('video');
-      v.src = URL.createObjectURL(blob);
+      // iOS: inline + muted to be allowed to play without a tap; sound is unlocked by the sound button.
+      v.muted = true;
       v.playsInline = true;
+      v.setAttribute('playsinline', '');
       v.preload = 'auto';
+      v.src = URL.createObjectURL(blob);
+      v.load();
       m.set(l.id, v);
     }
     return m;
@@ -92,7 +99,7 @@ export function Preview({ onClose, startPage = 0 }: { onClose(): void; startPage
         const v = videos.get(l.id);
         if (!v) continue;
         const onPage = plan.videoLayers.includes(l) || (mode === 'seam' && seamIndex >= 0 && plans[seamIndex + 1].videoLayers.includes(l)) || audioPlan.audioLayer?.id === l.id;
-        v.muted = muted || audioPlan.audioLayer?.id !== l.id;
+        v.muted = muted || blocked.current || audioPlan.audioLayer?.id !== l.id;
         v.volume = Math.min(1, l.clip.gain);
         const s = sourceTimeMs(l.clip, t);
         const active = playing && onPage && s !== null && t < clipEndMs(l.clip);
@@ -104,14 +111,22 @@ export function Preview({ onClose, startPage = 0 }: { onClose(): void; startPage
           continue;
         }
         if (Math.abs(v.currentTime * 1000 - s!) > 250 && !v.seeking) v.currentTime = s! / 1000;
-        if (v.paused) void v.play().catch(() => undefined);
+        if (v.paused)
+          void v.play().catch(() => {
+            if (v.muted) return;
+            blocked.current = true;
+            setSoundBlocked(true);
+            v.muted = true;
+            void v.play().catch(() => undefined);
+          });
       }
     };
     const sources: FrameSources = {
       image: (id) => library.imageBitmap(id),
-      video: (layer: VideoLayer) => {
+      video: (layer: VideoLayer, sourceMs: number) => {
         const v = videos.get(layer.id);
-        return v && v.readyState >= 2 ? v : null;
+        // Not ready yet (iOS loads nothing until it plays): show the decoded frame meanwhile.
+        return v && v.readyState >= 2 ? v : library.decodedFrame(layer.assetId, sourceMs);
       },
     };
     const paint = (t: number) => {
@@ -250,8 +265,27 @@ export function Preview({ onClose, startPage = 0 }: { onClose(): void; startPage
               <button className="btn btn--icon" onClick={() => setPlaying((p) => !p)} aria-label={playing ? 'Pause' : 'Play'}>
                 <Icon name={playing ? 'pause' : 'play'} />
               </button>
-              <button className="btn btn--icon" onClick={() => setMuted((m) => !m)} aria-pressed={muted} aria-label={muted ? 'Unmute' : 'Mute'}>
-                <Icon name={muted ? 'mute' : 'sound'} />
+              <button
+                className="btn btn--icon"
+                onClick={() => {
+                  if (soundBlocked) {
+                    // A tap is allowed to start sound: unmute the audible clip right here.
+                    blocked.current = false;
+                    setSoundBlocked(false);
+                    setMuted(false);
+                    const v = audioPlan.audioLayer ? videos.get(audioPlan.audioLayer.id) : undefined;
+                    if (v) {
+                      v.muted = false;
+                      void v.play().catch(() => undefined);
+                    }
+                    return;
+                  }
+                  setMuted((m) => !m);
+                }}
+                aria-pressed={muted || soundBlocked}
+                aria-label={muted || soundBlocked ? 'Unmute' : 'Mute'}
+              >
+                <Icon name={muted || soundBlocked ? 'mute' : 'sound'} />
               </button>
               <span className="mono">
                 {(clock / 1000).toFixed(1)} / {(duration / 1000).toFixed(1)} s
